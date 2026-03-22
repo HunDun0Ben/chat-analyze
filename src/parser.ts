@@ -72,7 +72,7 @@ export class SessionParser {
 
     const firstPrompt = userMsgs[0]?.content || "";
     const category = this.detectCategory(firstPrompt, toolChain);
-    const correctionCount = this.countCorrections(userMsgs);
+    const correctionCount = this.countCorrections(userMsgs, messages);
 
     return {
       sessionId: session.sessionId,
@@ -124,33 +124,88 @@ export class SessionParser {
     return 'General';
   }
 
-  private countCorrections(userMsgs: SessionMessage[]): number {
-    const correctionPatterns = [/不对/, /错误/, /重新/, /理解错/, /不是这个/];
-    return userMsgs.filter(m => 
-      correctionPatterns.some(p => p.test(m.content))
+  private countCorrections(userMsgs: SessionMessage[], allMsgs: SessionMessage[]): number {
+    const correctionPatterns = [/不对/, /错误/, /重新/, /理解错/, /不是这个/, /wrong/, /incorrect/, /fix/, /报错/];
+    const userCount = userMsgs.filter(m => 
+      correctionPatterns.some(p => p.test(m.content.toLowerCase()))
     ).length;
+
+    // 工具失败 (隐性纠错)
+    const toolFailures = allMsgs.flatMap(m => m.toolCalls || [])
+      .filter(tc => tc.status === 'error').length;
+
+    return userCount + toolFailures;
   }
 
   private calculateQualityScore(corrections: number, prompt: string): number {
-    if (!prompt && corrections === 0) return 100;
+    if (!prompt) return 100;
+    
     let score = 100;
-    score -= corrections * 15;
-    if (prompt && prompt.length < 15) score -= 10;
-    return Math.max(0, score);
+    
+    // 1. 纠错扣分 (权重最高)
+    score -= (corrections * 15);
+    
+    // 2. 长度扣分
+    if (prompt.length < 10) score -= 15;
+    else if (prompt.length < 30) score -= 5;
+    
+    // 3. 模糊词扣分
+    const ambiguities = this.detectAmbiguities(prompt);
+    score -= (ambiguities.length * 10);
+    
+    // 4. 上下文缺失扣分 (如没有文件路径、代码块或引用)
+    const hasContext = /[\/\.\w]+\.\w+|`{1,3}|@\w+/.test(prompt);
+    if (!hasContext && prompt.length > 20) score -= 10;
+
+    return Math.max(0, Math.min(100, score));
   }
 
   private detectAmbiguities(prompt: string): string[] {
     const ambiguities: string[] = [];
     if (!prompt) return ambiguities;
-    if (prompt.includes('这个') || prompt.includes('那个')) ambiguities.push("使用模糊代词");
-    if (prompt.length < 10) ambiguities.push("指令描述过短");
-    return ambiguities;
+
+    const dictionary = [
+      { pattern: /这个|那个|这些|那些|这儿|那儿/, label: "过度依赖上下文代词" },
+      { pattern: /所有的|全部的|整改|整体/, label: "操作范围描述模糊" },
+      { pattern: /帮我|帮下|给个|写个/, label: "指令意图过于口语化" },
+      { pattern: /快点|立即|马上|给我/, label: "缺乏逻辑引导的紧迫感" },
+      { pattern: /类似|差不多|这种/, label: "缺乏具体对比基准" }
+    ];
+
+    dictionary.forEach(rule => {
+      if (rule.pattern.test(prompt)) {
+        ambiguities.push(rule.label);
+      }
+    });
+
+    if (prompt.length < 15) ambiguities.push("指令信息量过低");
+
+    return [...new Set(ambiguities)];
   }
 
   private generateSuggestion(prompt: string): string {
     if (!prompt) return "等待您的第一条指令以开始分析。";
-    if (prompt.length < 15) return "建议补充更多上下文，例如具体的文件路径或预期的代码行为。";
-    if (this.detectAmbiguities(prompt).length > 0) return "尝试替换 '这个'、'那个' 为具体的类名、函数名或文件名。";
-    return "保持良好，可尝试在 Prompt 中加入 '作为一名资深架构师' 等角色约束。";
+    
+    const ambiguities = this.detectAmbiguities(prompt);
+    const category = this.detectCategory(prompt, []); // 传入空工具链进行预判
+
+    if (ambiguities.length > 0) {
+      if (ambiguities.includes("过度依赖上下文代词")) {
+        return "建议使用具体的类名、方法名或文件名替换 '这个/那个'，以减少模型理解偏差。";
+      }
+      if (prompt.length < 15) {
+        return "指令过短。尝试采用 [背景] + [任务目标] + [约束条件] 的三段式结构。";
+      }
+    }
+
+    if (category === 'Coding') {
+      return "建议在 Prompt 中明确预期的输入输出，并要求模型在操作前先进行 'Thought' 思考过程。";
+    }
+
+    if (category === 'Learning') {
+      return "针对学习类任务，可以要求模型 '由浅入深' 或 '提供对比示例'。";
+    }
+
+    return "当前提问质量良好。您可以尝试加入 '角色设定'（如：资深架构师）来获取更具深度的回应。";
   }
 }

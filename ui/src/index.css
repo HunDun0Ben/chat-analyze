@@ -1,0 +1,60 @@
+@import "tailwindcss";
+
+@theme {
+  /* 定义基础设计令牌 */
+  --color-brand-primary: #3b82f6;
+  --color-brand-secondary: #6366f1;
+  
+  --color-bg-app: #020617;
+  --color-bg-sidebar: #0f172a;
+  --color-bg-card: #1e293b;
+  --color-bg-user-bubble: #1d4ed8; /* 调整后的 User 颜色 */
+  
+  --color-text-main: #f1f5f9;
+  --color-text-muted: #94a3b8;
+  --color-text-dim: #64748b;
+  
+  --color-border-subtle: #1e293b;
+  --color-border-strong: #334155;
+
+  --radius-card: 1rem;
+  --radius-bubble: 0.75rem;
+}
+
+:root {
+  /* 将令牌映射到全局变量，方便后续扩展暗黑/明亮模式切换 */
+  --app-bg: #020617;
+  --sidebar-bg: #0b0f1a;
+  --card-bg: #111827;
+  --card-border: #1f2937;
+  
+  --user-bg: #1e293b; /* 默认 User 框改为更稳重的深色 */
+  --user-border: #3b82f640;
+  --user-text: #e2e8f0;
+
+  --gemini-bg: #111827;
+  --gemini-border: #374151;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background-color: var(--app-bg);
+  color: var(--color-text-main);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* 自定义滚动条样式，使其更符合 token 设计 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}

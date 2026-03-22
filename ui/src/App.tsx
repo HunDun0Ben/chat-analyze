@@ -1,0 +1,23 @@
+
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Sidebar } from './components/Sidebar';
+import { Dashboard } from './components/Dashboard';
+import { SessionView } from './views/SessionView';
+
+function App() {
+  return (
+    <Router>
+      <div className="flex h-screen w-screen overflow-hidden bg-black text-slate-300 font-sans selection:bg-blue-500/30 selection:text-white">
+        <Sidebar />
+        <main className="flex-1 min-w-0 relative flex flex-col">
+          <Routes>
+            <Route path="/session/:id" element={<SessionView />} />
+            <Route path="/" element={<Dashboard />} />
+          </Routes>
+        </main>
+      </div>
+    </Router>
+  );
+}
+
+export default App;

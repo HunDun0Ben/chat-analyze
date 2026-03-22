@@ -1,0 +1,66 @@
+export interface SessionSummary {
+  sessionId: string;
+  projectName: string;
+  category: string;
+  startTime: string;
+  score: number;
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  args: any;
+  result?: any;
+  status: 'success' | 'failure' | 'pending';
+  timestamp: string;
+}
+
+export interface MessageThought {
+  subject: string;
+  description: string;
+}
+
+export interface SessionMessage {
+  id: string;
+  type: 'user' | 'gemini' | 'info';
+  content: string;
+  thoughts?: MessageThought[];
+  toolCalls?: ToolCall[];
+  timestamp: string;
+}
+
+export interface AnalyzedSession {
+  sessionId: string;
+  projectName: string;
+  modelId: string;
+  category: string;
+  expressionQuality: {
+    score: number;
+    ambiguities: string[];
+    suggestion: string;
+  };
+  stats: {
+    turns: number;
+    corrections: number;
+    toolChain: string[];
+    tokenUsage: {
+      input: number;
+      output: number;
+      total: number;
+    };
+  };
+  messages: SessionMessage[];
+}
+
+export interface StatsTimeline {
+  date: string;
+  avgScore: number;
+}
+
+export interface ModelStat {
+  modelId: string;
+  sessionCount: number;
+  avgScore: number;
+  avgTokens: number;
+  avgTurns: number;
+}

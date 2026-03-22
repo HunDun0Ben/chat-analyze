@@ -6,56 +6,52 @@
 
 import chokidar from 'chokidar';
 import path from 'node:path';
-import { SessionParser } from './parser.js';
-import { SessionStorage } from './storage.js';
+import { SessionManager } from './manager.js';
 
 export class ChatWatcher {
   private watcher: chokidar.FSWatcher;
-  private parser: SessionParser;
-  private storage: SessionStorage;
 
   constructor(
     private watchPath: string,
-    dbPath: string = './chat_analyze.db'
+    private manager: SessionManager
   ) {
-    this.parser = new SessionParser();
-    this.storage = new SessionStorage(dbPath);
-    
-    // 监听特定模式的 session 文件
-    this.watcher = chokidar.watch(`${watchPath}/**/chats/session-*.json`, {
+    // 监听所有项目目录及其 chats 子目录下的 session 文件
+    this.watcher = chokidar.watch([
+      `${watchPath}/**/session-*.json`,
+      `${watchPath}/**/chats/session-*.json`
+    ], {
       persistent: true,
-      ignoreInitial: false
+      ignoreInitial: true // 初始加载由 Manager 处理
     });
   }
 
   start() {
-    console.log(`Watching for chat sessions in: ${this.watchPath}`);
+    console.log(`[Watcher] Monitoring for chat updates in: ${this.watchPath}`);
 
     this.watcher.on('add', async (filePath) => {
-      console.log(`[New Session Detected]: ${path.basename(filePath)}`);
+      if (!path.basename(filePath).startsWith('session-')) return;
+      
+      console.log(`[Detected]: ${path.basename(filePath)}`);
       try {
-        const session = await this.parser.analyze(filePath);
-        this.storage.saveSession(session);
-        console.log(`  - Successfully analyzed and stored.`);
+        const session = await this.manager.upsertFromFile(filePath);
+        console.log(`  - Loaded [${session.projectName}] into memory`);
       } catch (err) {
-        console.error(`  - Failed to process ${filePath}:`, err);
+        // Error already logged in manager
       }
     });
 
     this.watcher.on('change', async (filePath) => {
       console.log(`[Session Updated]: ${path.basename(filePath)}`);
       try {
-        const session = await this.parser.analyze(filePath);
-        this.storage.saveSession(session);
-        console.log(`  - Updated in database.`);
+        await this.manager.upsertFromFile(filePath);
+        console.log(`  - Memory cache updated.`);
       } catch (err) {
-        console.error(`  - Failed to update ${filePath}:`, err);
+        // Error already logged in manager
       }
     });
   }
 
   async stop() {
     await this.watcher.close();
-    this.storage.close();
   }
 }

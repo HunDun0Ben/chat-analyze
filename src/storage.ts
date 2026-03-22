@@ -82,6 +82,48 @@ export class SessionStorage {
     return rows.map((row: any) => JSON.parse(row.data) as AnalyzedSession);
   }
 
+  getSessionById(sessionId: string): AnalyzedSession | null {
+    const row = this.db.prepare('SELECT data FROM sessions WHERE sessionId = ?').get(sessionId) as any;
+    return row ? JSON.parse(row.data) as AnalyzedSession : null;
+  }
+
+  getProjects(): string[] {
+    const rows = this.db.prepare('SELECT DISTINCT projectName FROM sessions').all() as any[];
+    return rows.map(row => row.projectName);
+  }
+
+  getStatsTimeline(): { date: string; avgScore: number }[] {
+    const sql = `
+      SELECT 
+        strftime('%Y-%m-%d', startTime) as date,
+        AVG(score) as avgScore
+      FROM sessions
+      GROUP BY date
+      ORDER BY date ASC
+      LIMIT 30
+    `;
+    const rows = this.db.prepare(sql).all() as any[];
+    return rows.map(row => ({
+      date: row.date,
+      avgScore: Math.round(row.avgScore)
+    }));
+  }
+
+  getModelStats(): any[] {
+    const sql = `
+      SELECT 
+        modelId,
+        COUNT(*) as sessionCount,
+        AVG(score) as avgScore,
+        AVG(totalTokens) as avgTokens,
+        AVG(turns) as avgTurns
+      FROM sessions
+      GROUP BY modelId
+      ORDER BY avgScore DESC
+    `;
+    return this.db.prepare(sql).all();
+  }
+
   close() {
     this.db.close();
   }

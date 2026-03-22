@@ -6,17 +6,26 @@
   "type": "module",
   "scripts": {
     "test:parser": "tsx src/test-parser.ts",
-    "dev": "tsx src/index.ts",
-    "build": "tsc"
+    "dev:server": "tsx src/index.ts",
+    "dev:ui": "cd ui && npm run dev",
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
+    "build": "tsc",
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
-    "@types/node": "^20.11.24",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/node": "^20.19.37",
+    "concurrently": "^9.2.1",
     "tsx": "^4.7.1",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
     "better-sqlite3": "^12.8.0",
-    "chokidar": "^5.0.0"
+    "chokidar": "^5.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
   }
 }
