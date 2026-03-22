@@ -27,8 +27,16 @@ interface AnalyzedSession {
   // 效率统计
   stats: {
     turns: number;        // 对话轮数
+    userTurns: number;    // 用户输入轮数
+    geminiTurns: number;  // 模型响应轮数
     corrections: number;  // 纠错循环次数
-    toolChain: string[];  // 轨迹：如 ['grep_search', 'read_file', 'replace']
+    toolChain: string[];  // 顺序轨迹：按时间戳排列的工具调用序列
+    tokenUsage: {
+      input: number;      // 输入总消耗
+      output: number;     // 输出总消耗
+      thoughts: number;   // 思考过程消耗
+      total: number;      // 总消耗
+    };
   };
   
   isStudyMode: boolean; // 是否为学习/代码阅读模式

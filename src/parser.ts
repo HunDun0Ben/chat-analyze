@@ -52,7 +52,12 @@ export class SessionParser {
 
     const userMsgs = messages.filter(m => m.type === 'user');
     const geminiMsgs = messages.filter(m => m.type === 'gemini');
-    const toolChain = geminiMsgs.flatMap(m => m.toolCalls?.map(tc => tc.name) || []);
+    
+    // 提取全局工具链轨迹 (按时间戳严格排序)
+    const toolChain = messages
+      .flatMap(m => m.toolCalls || [])
+      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+      .map(tc => tc.name);
     
     // 聚合 Token 消耗 (优化为 O(N))
     const tokenUsage = session.messages.reduce((acc: any, m: any) => {
@@ -107,10 +112,15 @@ export class SessionParser {
   }
 
   private detectCategory(prompt: string, tools: string[]): TaskCategory {
-    if (tools.some(t => ['replace', 'write_file'].includes(t))) return 'Coding';
-    if (/解释|如何|原理|学习/.test(prompt)) return 'Learning';
-    if (tools.some(t => ['run_shell_command'].includes(t))) return 'Ops';
-    if (/架构|设计|模式/.test(prompt)) return 'Arch';
+    // 优先级排序：Coding -> Ops -> Research -> Investigate -> Arch -> Learning -> General
+    if (tools.some(t => ['replace', 'write_file', 'apply_diff'].includes(t))) return 'Coding';
+    if (tools.some(t => ['run_shell_command', 'gh'].includes(t))) return 'Ops';
+    if (tools.some(t => ['web_fetch', 'google_web_search'].includes(t))) return 'Research';
+    if (tools.some(t => ['grep_search', 'glob', 'list_directory'].includes(t))) return 'Investigate';
+    
+    if (/架构|设计|模式|architecture|design|pattern/.test(prompt.toLowerCase())) return 'Arch';
+    if (/解释|如何|原理|学习|explain|how|why|learn/.test(prompt.toLowerCase())) return 'Learning';
+    
     return 'General';
   }
 

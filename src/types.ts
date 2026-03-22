@@ -4,7 +4,7 @@
  * Gemini Chat Analyze - Core Data Types
  */
 
-export type TaskCategory = 'Coding' | 'Learning' | 'Ops' | 'Arch' | 'General';
+export type TaskCategory = 'Coding' | 'Learning' | 'Ops' | 'Arch' | 'Investigate' | 'Research' | 'General';
 
 export interface AnalyzedSession {
   sessionId: string;

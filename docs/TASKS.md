@@ -23,10 +23,17 @@
 ## 阶段二：核心业务逻辑分析 (Core Analysis Logic)
 本阶段专注于从结构化的会话数据中提取“行为模式”和“效率评估”指标。
 
-- [ ] **任务 2.1: 任务类型自动分类**
-  - 完善 `detectCategory` 逻辑，根据关键字、使用的工具（如 `replace` vs `read_file`）将任务精准归类为 Coding (开发)、Learning (学习)、Ops (运维)、Arch (架构) 等。
-- [ ] **任务 2.2: 工具链轨迹识别**
+- [x] **任务 2.1: 任务类型自动分类**
+  - 完善 `detectCategory` 逻辑，支持基于工具特征的精细化分类：
+    - `Coding`: 使用 `replace`, `write_file`, `apply_diff` 等。
+    - `Ops`: 使用 `run_shell_command`, `gh` 等。
+    - `Investigate`: 使用 `grep_search`, `glob`, `list_directory` 等。
+    - `Research`: 使用 `web_fetch`, `google_web_search` 等。
+    - `Arch`: 匹配 Prompt 中的架构/设计/模式关键字。
+    - `Learning`: 匹配 Prompt 中的解释/原理/如何关键字。
+- [x] **任务 2.2: 工具链轨迹识别**
   - 提取并规范化工具调用序列（例如 `grep` -> `read` -> `edit`），建立高频操作模式库。
+  - 在 `AnalyzedSession` 中增加 `toolChain` 的顺序轨迹记录（按时间戳排序）。
 - [ ] **任务 2.3: 效率统计与纠错识别**
   - 统计单任务的对话轮数 (turns)。
   - 通过正则或语义分析，识别用户的不满或修正习惯（如“不对”、“报错了”），计算纠错循环次数 (corrections)。
