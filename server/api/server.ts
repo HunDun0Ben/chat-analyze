@@ -7,7 +7,11 @@
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SessionManager } from '../core/manager.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function startServer(manager: SessionManager) {
   const app = express();
@@ -80,7 +84,8 @@ export function startServer(manager: SessionManager) {
       const skillName = session.projectName.split('/').pop() || 'new-skill';
       const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages[0].content}\n- **Model**: ${session.modelId}\n`;
 
-      const exportDir = './exports/skills';
+      // 稳健的导出路径：始终相对于项目根目录
+      const exportDir = path.resolve(__dirname, '../../exports/skills');
       const exportPath = `${exportDir}/${skillName}-${session.sessionId.slice(0, 8)}.md`;
       
       if (!fs.existsSync(exportDir)) {

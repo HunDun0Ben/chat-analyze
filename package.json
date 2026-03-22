@@ -2,30 +2,21 @@
   "name": "chat-analyze",
   "version": "1.0.0",
   "description": "Gemini Chat Analyze & Evolver",
-  "main": "dist/index.js",
+  "private": true,
   "type": "module",
+  "workspaces": [
+    "server",
+    "ui"
+  ],
   "scripts": {
-    "test:parser": "tsx server/__tests__/test-parser.ts",
-    "dev:server": "tsx server/index.ts",
-    "dev:ui": "cd ui && npm run dev",
+    "dev:server": "npm run dev -w @chat-analyze/server",
+    "dev:ui": "npm run dev -w ui",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
-    "build": "tsc",
-    "test": "vitest run"
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "^20.19.37",
     "concurrently": "^9.2.1",
-    "tsx": "^4.7.1",
-    "typescript": "^5.3.3",
-    "vitest": "^4.1.0"
-  },
-  "dependencies": {
-    "better-sqlite3": "^12.8.0",
-    "chokidar": "^5.0.0",
-    "cors": "^2.8.6",
-    "express": "^5.2.1"
+    "typescript": "^5.3.3"
   }
 }
