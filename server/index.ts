@@ -4,9 +4,9 @@
  * Gemini Chat Analyze - Entry Point
  */
 
-import { ChatWatcher } from './watcher.js';
-import { startServer } from './server.js';
-import { SessionManager } from './manager.js';
+import { ChatWatcher } from './core/watcher.js';
+import { startServer } from './api/server.js';
+import { SessionManager } from './core/manager.js';
 import path from 'node:path';
 import os from 'node:os';
 

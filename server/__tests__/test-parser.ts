@@ -4,8 +4,8 @@
  * Gemini Chat Analyze - Parser & Storage Test Script
  */
 
-import { SessionParser } from './parser.js';
-import { SessionStorage } from './storage.js';
+import { SessionParser } from '../core/parser.js';
+import { SessionStorage } from '../db/storage.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 

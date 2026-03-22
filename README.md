@@ -1,37 +1,93 @@
-# Gemini Chat Analyze & Evolver
+# 🚀 Gemini Chat Analyze & Evolver
 
-这是一个专为开发者设计的“人机协作进化系统”，它通过监听、解析、分析 Gemini CLI 的历史会话，提供深度的可视化洞察和 Prompt 指令进化建议。
+[English] | [中文版](./README.zh-CN.md)
 
-## 🚀 核心功能 (Main Features)
-- **实时会话观测器 (Viewer)**: 美观的 Markdown 渲染，支持思考链 (Thoughts) 折叠展示。
-- **工具链轨迹追踪 (Tool Timeline)**: 可视化每个工具调用的 `args` 和 `result`。
-- **表达进化教练 (Coach Module)**: 自动审计 Prompt 质量，识别模糊代词，提供改写建议。
-- **成长曲线仪表盘 (Dashboard)**: 可视化展示用户指令精准度的演进趋势。
-- **设计令牌主题 (Tokenized UI)**: 统一的深色模式主题系统，类似 Linear 设计风格。
+A localized, private session auditing and evolution engine designed for Gemini CLI. It monitors your AI interaction records in real-time, provides feedback on prompt quality via the **Coach Module**, and tracks performance across different models and tasks using SQLite.
 
-## 🛠️ 快速上手 (Getting Started)
+---
 
-### 环境要求
+## ✨ Current Features
+
+### 1. Real-time Auditing
+
+- **Watcher**: Automatically monitors JSON changes in `~/.gemini/tmp`, enabling instant analysis upon message generation.
+- **Parser**: Extracts Markdown content, Tool Chains, Token usage, and Chain-of-Thoughts.
+- **Project-Centric**: Detects project ownership and recovers names from path structures for long-hash project IDs.
+
+### 2. Coach Module
+
+- **Scoring**: 0-100 quality score based on correction frequency, length, and ambiguity.
+- **Suggestions**: Generates tips for improving prompts (e.g., reducing ambiguous pronouns, adding context).
+- **Classification**: Detects task types (Coding, Ops, Research, Arch, Learning, General).
+
+### 3. Data & Visualization
+
+- **Local Storage**: Privacy-first persistence with SQLite. No data leaves your machine.
+- **Dashboard**:
+  - **Trend Analysis**: 30-day quality score timeline.
+  - **Model Comparison**: Stats for average score, token efficiency, and turns across different models.
+- **Skill Export**: Export high-quality sessions as Gemini CLI `.md` skill files.
+
+---
+
+## 📅 Future Roadmap
+
+### Short-term
+
+- [ ] **Multi-Session Comparison**: A/B testing for different models on the same prompt.
+- [ ] **Custom Scoring Rules**: User-configurable auditing logic.
+- [ ] **Code Diff Analysis**: Deep integration with `replace` logic to analyze accuracy and regression risks.
+
+### Long-term
+
+- [ ] **Smart Rewrite Engine**: Auto-rewrite low-score prompts using local LLMs.
+- [ ] **IDE Integration**: View history and AI suggestions directly in VS Code.
+- [ ] **Team Knowledge Base**: Extract technical decisions to generate ADRs.
+
+---
+
+## 🏗️ Technical Architecture
+
+- **Backend**: Node.js + TypeScript + Express
+- **Storage**: SQLite (`better-sqlite3`)
+- **Frontend**: React + Vite + Tailwind CSS
+- **Monitor**: Chokidar (FS Watcher)
+
+---
+
+## 🛠️ Getting Started
+
+### Prerequisites
+
 - Node.js v18+
-- [Gemini CLI](https://github.com/google/gemini-cli) 已安装并有历史对话记录。
+- [Gemini CLI](https://github.com/google/gemini-cli)
 
-### 安装与启动
-1. 克隆并安装依赖：
-   ```sh
-   npm install
-   cd ui && npm install && cd ..
-   ```
-2. 启动全栈开发环境：
-   ```sh
-   npm run dev
-   ```
-   - **Frontend**: http://localhost:5173
-   - **API Server**: http://localhost:3001
+### Installation
 
-## 🏛️ 目录结构
-- `src/`: 后端核心，包含 Watcher, Parser 和 SQLite 存储层。
-- `ui/`: 前端 React (Vite) 应用。
-- `docs/`: 包含架构设计、任务列表和数据结构文档。
+```bash
+npm install
+cd ui && npm install && cd ..
+```
 
-## 📈 设计哲学
-本系统坚持“离线优先 (Offline First)”和“Token 效率 (Token Efficiency)”原则，所有分析数据均存储在本地 `chat_analyze.db`。
+### Run
+
+```bash
+# Starts Watcher, API Server, and UI Dashboard
+npm run dev
+```
+
+---
+
+## 🏛️ Directory Structure
+
+- `server/`: Backend Core
+  - `core/`: Parser, Watcher, Manager
+  - `api/`: RESTful API Service
+  - `db/`: SQLite Storage
+- `ui/`: React Dashboard
+
+---
+
+## 📄 License
+
+Copyright 2026 Google LLC. Licensed under the Apache License 2.0.

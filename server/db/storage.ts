@@ -5,7 +5,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { AnalyzedSession } from './types.js';
+import { AnalyzedSession } from '../types/index.js';
 import path from 'node:path';
 import fs from 'node:fs';
 

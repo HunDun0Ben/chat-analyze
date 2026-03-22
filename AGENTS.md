@@ -7,7 +7,7 @@
 ## 1. 核心工程标准 (Core Standards)
 - **离线首位 (Offline First)**: 禁止将用户对话数据、Token 消耗、或分析结果上传到任何第三方服务（GitHub 除外，且需脱敏）。
 - **运行环境**: 使用 `tsx` 直接运行 TypeScript 源代码进行测试与调试。
-- **存储规范**: 所有持久化必须经过 `src/storage.ts` (SQLite)，严禁使用纯文本作为主存储。
+- **存储规范**: 所有持久化必须经过 `server/db/storage.ts` (SQLite)，严禁使用纯文本作为主存储。
 
 ## 2. 代码开发准则 (Coding Guidelines)
 - **Token 效率**: 在处理 `session.messages` 这种大数组时，严禁使用 O(N²) 的嵌套查询（如在 `map` 里执行 `find`），必须优先使用 `reduce` 或预处理 Map 进行 O(N) 聚合。

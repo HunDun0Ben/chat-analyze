@@ -5,12 +5,13 @@
  */
 
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { 
   AnalyzedSession, 
   SessionMessage, 
   TaskCategory, 
   AnalyzedSession as AnalyzedSessionInterface
-} from './types.js';
+} from '../types/index.js';
 
 export class SessionParser {
   async analyze(filePath: string): Promise<AnalyzedSessionInterface> {
@@ -74,9 +75,21 @@ export class SessionParser {
     const category = this.detectCategory(firstPrompt, toolChain);
     const correctionCount = this.countCorrections(userMsgs, messages);
 
+    // 智能提取项目名称：优先使用 JSON 里的，如果是哈希则从路径提取
+    let projectName = session.projectName || session.projectHash || "Unknown";
+    if (/^[a-f0-9]{64}$/.test(projectName)) {
+      const parts = filePath.split(path.sep);
+      const chatsIdx = parts.indexOf('chats');
+      if (chatsIdx > 0) {
+        projectName = parts[chatsIdx - 1];
+      } else if (parts.length >= 2) {
+        projectName = parts[parts.length - 2];
+      }
+    }
+
     return {
       sessionId: session.sessionId,
-      projectName: session.projectName || session.projectHash || "Unknown",
+      projectName,
       projectHash: session.projectHash,
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || "unknown",
       category,

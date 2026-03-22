@@ -9,10 +9,10 @@
 ## 2. 核心组件 (Core Components)
 
 ### 2.1 后端 (Server & Parser)
-- **Watcher (`src/watcher.ts`)**: 监听 `~/.gemini/tmp` 目录下的 JSON 变更。
-- **Parser (`src/parser.ts`)**: 核心审计引擎。负责 Markdown 提取、工具链分析及 **Coach Module** 评分。
-- **Storage (`src/storage.ts`)**: 基于 `better-sqlite3`。存储标准化后的会话数据，支持时间序列统计。
-- **API Server (`src/server.ts`)**: 提供 REST 接口。
+- **Watcher (`server/core/watcher.ts`)**: 监听 `~/.gemini/tmp` 目录下的 JSON 变更。
+- **Parser (`server/core/parser.ts`)**: 核心审计引擎。负责 Markdown 提取、工具链分析及 **Coach Module** 评分。
+- **Storage (`server/db/storage.ts`)**: 基于 `better-sqlite3`。存储标准化后的会话数据，支持时间序列统计。
+- **API Server (`server/api/server.ts`)**: 提供 REST 接口。
 
 ### 2.2 前端 (UI & Viewer)
 - **Vite + React (TS)**: 响应式前端框架。

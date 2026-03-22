@@ -5,8 +5,8 @@
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "test:parser": "tsx src/test-parser.ts",
-    "dev:server": "tsx src/index.ts",
+    "test:parser": "tsx server/__tests__/test-parser.ts",
+    "dev:server": "tsx server/index.ts",
     "dev:ui": "cd ui && npm run dev",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
     "build": "tsc",

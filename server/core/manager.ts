@@ -7,7 +7,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { SessionParser } from './parser.js';
-import { AnalyzedSession } from './types.js';
+import { AnalyzedSession } from '../types/index.js';
 
 export class SessionManager {
   private sessions: Map<string, AnalyzedSession> = new Map();

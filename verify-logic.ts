@@ -1,7 +1,7 @@
 /**
  * Logic Verification Script
  */
-import { SessionManager } from './src/manager.js';
+import { SessionManager } from './server/core/manager.js';
 import path from 'node:path';
 import os from 'node:os';
 

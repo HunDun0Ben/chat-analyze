@@ -7,7 +7,7 @@
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
-import { SessionManager } from './manager.js';
+import { SessionManager } from '../core/manager.js';
 
 export function startServer(manager: SessionManager) {
   const app = express();
