@@ -1,0 +1,23 @@
+# Dependency directories
+node_modules/
+
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Local database
+*.db
+*.db-journal
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
