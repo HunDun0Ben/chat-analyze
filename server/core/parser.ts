@@ -16,7 +16,26 @@ import {
 export class SessionParser {
   async analyze(filePath: string): Promise<AnalyzedSessionInterface> {
     const rawData = await fs.readFile(filePath, 'utf-8');
-    const session = JSON.parse(rawData);
+    let session: any;
+    try {
+      session = JSON.parse(rawData);
+    } catch (err) {
+      throw new Error(`Invalid JSON format: ${(err as Error).message}`);
+    }
+
+    if (!session || typeof session !== 'object') {
+      throw new Error('Invalid session data: Not an object');
+    }
+
+    // Detect ChatGPT export format
+    if (session.mapping && (session.conversation_id || session.id)) {
+      return this.analyzeChatGPT(session, filePath);
+    }
+
+    // Standard Gemini session format check
+    if (!Array.isArray(session.messages)) {
+      throw new Error('Not a valid session: Missing "messages" array');
+    }
 
     const messages: SessionMessage[] = session.messages.map((m: any) => {
       const msg: SessionMessage = {
@@ -112,15 +131,174 @@ export class SessionParser {
     };
   }
 
+  private analyzeChatGPT(session: any, filePath: string): AnalyzedSessionInterface {
+    const messages: SessionMessage[] = [];
+    let currentNodeId = session.current_node;
+    const nodeChain: any[] = [];
+
+    // Reconstruct conversation thread from leaf to root
+    while (currentNodeId && session.mapping[currentNodeId]) {
+      const node = session.mapping[currentNodeId];
+      if (node.message) {
+        nodeChain.push(node.message);
+      }
+      currentNodeId = node.parent;
+    }
+    nodeChain.reverse();
+
+    const resultMessages: SessionMessage[] = [];
+    let currentThoughts: any[] = [];
+    let currentToolCalls: any[] = [];
+    let pendingAssistantMsg: SessionMessage | null = null;
+
+    for (const m of nodeChain) {
+      const role = m.author.role;
+      const content = this.extractContent(m.content);
+      const timestamp = m.create_time ? new Date(m.create_time * 1000).toISOString() : new Date().toISOString();
+
+      if (role === 'user') {
+        // Commit previous assistant message if any
+        if (pendingAssistantMsg) {
+          resultMessages.push(pendingAssistantMsg);
+          pendingAssistantMsg = null;
+        }
+        
+        resultMessages.push({
+          id: m.id,
+          timestamp,
+          type: 'user',
+          content,
+          model: m.metadata?.model_slug || "chatgpt"
+        });
+        
+        // Reset buffers for next turn
+        currentThoughts = [];
+        currentToolCalls = [];
+      } else if (role === 'assistant') {
+        // Ensure pendingAssistantMsg exists for any assistant activity
+        if (!pendingAssistantMsg) {
+          pendingAssistantMsg = {
+            id: m.id,
+            timestamp,
+            type: 'gemini',
+            content: "",
+            model: m.metadata?.model_slug || "chatgpt",
+            thoughts: currentThoughts,
+            toolCalls: currentToolCalls
+          };
+        }
+
+        // Handle thoughts/reasoning
+        if (m.recipient === 'thought') {
+          currentThoughts.push({
+            subject: 'Thinking',
+            description: content,
+            timestamp
+          });
+          pendingAssistantMsg.thoughts = [...currentThoughts];
+          continue;
+        }
+
+        // Handle tool calls (code interpreter or search)
+        if (m.content?.content_type === 'code' || m.recipient === 'browser' || m.recipient === 'python') {
+          const toolName = m.recipient === 'browser' ? 'search' : (m.recipient === 'python' ? 'code_interpreter' : 'tool');
+          currentToolCalls.push({
+            id: m.id,
+            name: toolName,
+            args: { code: content },
+            status: 'pending',
+            timestamp
+          });
+          pendingAssistantMsg.toolCalls = [...currentToolCalls];
+          continue;
+        }
+
+        // Aggregate normal text content
+        if (content.trim()) {
+          pendingAssistantMsg.content = (pendingAssistantMsg.content + "\n" + content).trim();
+        }
+      } else if (role === 'tool') {
+        // Link tool result to the last pending tool call
+        if (currentToolCalls.length > 0) {
+          const lastTool = currentToolCalls[currentToolCalls.length - 1];
+          lastTool.result = content;
+          lastTool.status = 'success';
+          
+          if (pendingAssistantMsg) {
+            pendingAssistantMsg.toolCalls = [...currentToolCalls];
+          }
+        }
+      } else if (role === 'system' && content.trim()) {
+        resultMessages.push({
+          id: m.id,
+          timestamp,
+          type: 'info',
+          content,
+          model: 'system'
+        });
+      }
+    }
+
+    // Final commit
+    if (pendingAssistantMsg) {
+      resultMessages.push(pendingAssistantMsg);
+    }
+
+    const userMsgs = resultMessages.filter(m => m.type === 'user');
+    const geminiMsgs = resultMessages.filter(m => m.type === 'gemini');
+    const firstPrompt = userMsgs[0]?.content || "";
+    
+    // Extract tool chain for category detection
+    const toolChain = resultMessages
+      .flatMap(m => m.toolCalls || [])
+      .map(tc => tc.name);
+
+    const correctionCount = this.countCorrections(userMsgs, resultMessages);
+
+    return {
+      sessionId: session.conversation_id || session.id,
+      projectName: session.title || "ChatGPT Import",
+      projectHash: "chatgpt-import",
+      modelId: geminiMsgs[geminiMsgs.length - 1]?.model || "chatgpt",
+      category: this.detectCategory(firstPrompt, toolChain),
+      startTime: session.create_time ? new Date(session.create_time * 1000).toISOString() : new Date().toISOString(),
+      lastUpdated: session.update_time ? new Date(session.update_time * 1000).toISOString() : new Date().toISOString(),
+      expressionQuality: {
+        score: this.calculateQualityScore(correctionCount, firstPrompt),
+        ambiguities: this.detectAmbiguities(firstPrompt),
+        suggestion: this.generateSuggestion(firstPrompt)
+      },
+      stats: {
+        turns: resultMessages.length,
+        userTurns: userMsgs.length,
+        geminiTurns: geminiMsgs.length,
+        corrections: correctionCount,
+        toolChain,
+        tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }
+      },
+      messages: resultMessages
+    };
+  }
+
   private extractContent(content: any): string {
     if (!content) return "";
     if (typeof content === 'string') return content;
+    
     if (Array.isArray(content)) {
-      return content.map(c => c.text || "").join("");
+      return content.map(c => this.extractContent(c)).join("\n");
     }
-    if (typeof content === 'object' && (content as any).text) {
-      return (content as any).text;
+
+    if (typeof content === 'object') {
+      // Handle parts array (common in Gemini and ChatGPT)
+      if (Array.isArray(content.parts)) {
+        return content.parts.map((p: any) => typeof p === 'string' ? p : this.extractContent(p)).join("\n");
+      }
+      // Handle text field (common in ChatGPT tool calls/results)
+      if (content.text) return content.text;
+      // Handle nested values
+      if (content.value) return this.extractContent(content.value);
     }
+
     return "";
   }
 

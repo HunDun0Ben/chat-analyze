@@ -12,23 +12,29 @@ import os from 'node:os';
 
 async function bootstrap() {
   const homeDir = os.homedir();
-  // 默认扫描路径：Gemini CLI 的临时对话存储目录
-  // 注意：process.env.WATCH_PATH 可能会带 ~，如果是从 shell 传进来的，bash 会展开，但 js 不会。
-  let watchPath = process.env.WATCH_PATH || path.join(homeDir, '.gemini/tmp');
   
-  if (watchPath.startsWith('~')) {
-    watchPath = path.join(homeDir, watchPath.slice(1));
-  }
+  // 支持多个路径，用冒号分隔
+  // 例如：WATCH_PATHS="~/.gemini/tmp:/path/to/chatgpt"
+  const envPaths = process.env.WATCH_PATHS || process.env.WATCH_PATH || path.join(homeDir, '.gemini/tmp');
+  
+  const watchPaths = envPaths.split(':').map(p => {
+    let resolved = p.trim();
+    if (resolved.startsWith('~')) {
+      resolved = path.join(homeDir, resolved.slice(1));
+    }
+    return path.resolve(resolved);
+  });
 
   console.log('--- Gemini Chat Analyze & Evolver ---');
-  console.log(`[System] Initializing with path: ${watchPath}`);
+  console.log(`[System] Initializing with ${watchPaths.length} paths:`);
+  watchPaths.forEach(p => console.log(`  - ${p}`));
   
   // 1. 初始化内存管理器
-  const manager = new SessionManager(watchPath);
+  const manager = new SessionManager(watchPaths);
   await manager.init();
 
   // 2. 启动文件监听器
-  const watcher = new ChatWatcher(watchPath, manager);
+  const watcher = new ChatWatcher(watchPaths, manager);
   watcher.start();
 
   // 3. 启动 API 服务器
