@@ -1,7 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Sidebar } from './components/Sidebar';
-import { Dashboard } from './components/Dashboard';
+import { Sidebar } from './components/features/Sidebar';
+import { Dashboard } from './components/features/Dashboard';
 import { SessionView } from './views/SessionView';
 
 function App() {

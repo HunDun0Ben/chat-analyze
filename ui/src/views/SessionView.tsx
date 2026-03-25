@@ -6,7 +6,7 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { fetchSessionDetail } from '../api';
 import type { AnalyzedSession, ToolCall, MessageThought } from '../types';
-import { SessionInspector } from '../components/SessionInspector';
+import { SessionInspector } from '../components/features/SessionInspector';
 import { cn } from '../utils';
 
 export function SessionView() {
