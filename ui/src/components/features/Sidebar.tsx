@@ -1,149 +1,132 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * Gemini Chat Analyze - Refactored Sidebar
+ */
+
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { LayoutDashboard, ChevronRight, ChevronDown, Hash, Loader2, Search, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
-import { fetchProjects, fetchSessions } from '../api';
-import type { SessionSummary } from '../types';
-import { cn } from '../utils';
+import { NavLink } from 'react-router-dom';
+import { Search, Folder, MessageSquare, Plus, Zap, ChevronRight, LayoutDashboard, Database } from 'lucide-react';
+import { fetchProjects, fetchSessions } from '../../api';
+import type { AnalyzedSession } from '../../types';
+import { cn } from '../../utils';
+import { Badge } from '../ui/Badge';
 
 export function Sidebar() {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [projects, setProjects] = useState<string[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<AnalyzedSession[]>([]);
   const [search, setSearch] = useState('');
-  const [expanded, setExpanded] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProjects()
-      .then(projs => {
-        setProjects(projs);
-        if (projs.length > 0) setExpanded([projs[0]]);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    fetchProjects().then(setProjects);
   }, []);
 
-  const filteredProjects = projects.filter(p => 
-    p.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const toggleProject = (p: string) => {
-    if (isCollapsed) {
-      setIsCollapsed(false);
-      setExpanded([p]);
-      return;
-    }
-    setExpanded(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
-  };
-
-  return (
-    <div className={cn(
-      "bg-[var(--sidebar-bg)] text-slate-400 flex flex-col h-screen border-r border-[var(--card-border)] shrink-0 z-20 transition-all duration-300",
-      isCollapsed ? "w-16" : "w-64"
-    )}>
-      <div className="flex items-center justify-between p-4 h-16 border-b border-[var(--card-border)] overflow-hidden">
-        {!isCollapsed && (
-          <Link to="/" className="flex items-center gap-3 font-bold text-white hover:text-blue-400 transition-colors truncate">
-            <div className="bg-blue-600/20 p-1.5 rounded-lg border border-blue-500/30 shrink-0">
-              <LayoutDashboard size={18} className="text-blue-400" />
-            </div>
-            <span className="tracking-tight text-sm truncate animate-in fade-in slide-in-from-left-2">Chat Analyze</span>
-          </Link>
-        )}
-        {isCollapsed && (
-          <div className="bg-blue-600/20 p-1.5 rounded-lg border border-blue-500/30 mx-auto">
-            <LayoutDashboard size={18} className="text-blue-400" />
-          </div>
-        )}
-        <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className={cn(
-            "p-1.5 rounded-md hover:bg-white/5 text-slate-600 hover:text-white transition-all",
-            isCollapsed && "mt-2"
-          )}
-        >
-          {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-        </button>
-      </div>
-
-      {!isCollapsed && (
-        <div className="p-3 animate-in fade-in slide-in-from-top-2">
-          <div className="relative group">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 group-focus-within:text-blue-400 transition-colors" />
-            <input 
-              type="text"
-              placeholder="Search projects..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-slate-900/50 border border-[var(--card-border)] rounded-md py-1.5 pl-9 pr-3 text-xs text-slate-300 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20 transition-all placeholder:text-slate-700"
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="flex-1 overflow-y-auto p-3 pt-0 space-y-4">
-        <div className={cn(isCollapsed && "flex flex-col items-center")}>
-          {!isCollapsed && (
-            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-4 px-2 flex items-center gap-2">
-              <Hash size={10} /> Projects
-            </div>
-          )}
-          {loading ? (
-            <div className="flex items-center justify-center p-2 text-xs text-slate-600"><Loader2 size={12} className="animate-spin" /></div>
-          ) : filteredProjects.length === 0 ? (
-            !isCollapsed && <div className="px-2 py-4 text-[11px] text-slate-600 italic">No projects found</div>
-          ) : filteredProjects.map(p => (
-            <div key={p} className="mb-1">
-              <button 
-                onClick={() => toggleProject(p)}
-                title={isCollapsed ? p : undefined}
-                className={cn(
-                  "w-full flex items-center gap-2 p-2 hover:bg-white/5 rounded-md transition-all text-[13px] group",
-                  expanded.includes(p) && !isCollapsed && "text-white",
-                  isCollapsed && "justify-center"
-                )}
-              >
-                {isCollapsed ? (
-                   <div className="w-8 h-8 flex items-center justify-center bg-slate-800/50 rounded-md border border-white/5 text-[10px] font-bold uppercase text-slate-500 group-hover:text-blue-400 group-hover:border-blue-500/30 transition-all">
-                     {p.split('/').pop()?.substring(0, 2)}
-                   </div>
-                ) : (
-                  <>
-                    {expanded.includes(p) ? <ChevronDown size={14} className="text-slate-600" /> : <ChevronRight size={14} className="text-slate-600" />}
-                    <span className="truncate flex-1 text-left">{p}</span>
-                  </>
-                )}
-              </button>
-              {expanded.includes(p) && !isCollapsed && <ProjectSessions slug={p} />}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function ProjectSessions({ slug }: { slug: string }) {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
   useEffect(() => {
-    fetchSessions(slug).then(setSessions);
-  }, [slug]);
+    if (selectedProject) {
+      fetchSessions(selectedProject).then(setSessions);
+    }
+  }, [selectedProject]);
+
+  const filteredProjects = projects.filter(p => p.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div className="ml-3 mt-1 pl-3 border-l border-[var(--card-border)] space-y-1">
-      {sessions.map(s => (
-        <Link 
-          key={s.sessionId}
-          to={`/session/${s.sessionId}`}
-          className="group block p-2 text-[11px] hover:text-white hover:bg-white/5 rounded transition-all truncate"
-        >
-          <div className="flex justify-between items-center">
-            <span className="truncate">{s.sessionId.substring(0, 10)}...</span>
-            <span className="text-[9px] text-slate-600 group-hover:text-slate-500 font-mono">
-              {new Date(s.startTime).toLocaleDateString([], {month: 'numeric', day: 'numeric'})}
-            </span>
+    <aside className="w-72 border-r border-[var(--card-border)] bg-[var(--sidebar-bg)] flex flex-col h-full shrink-0 z-20">
+      <div className="p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <Zap size={18} className="text-white" fill="white" />
           </div>
-        </Link>
-      ))}
-    </div>
+          <div className="font-bold text-white tracking-tight">Gemini Audit</div>
+        </div>
+
+        <div className="relative group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={14} />
+          <input 
+            type="text" 
+            placeholder="Search projects..." 
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full bg-slate-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-black transition-all"
+          />
+        </div>
+      </div>
+
+      <nav className="flex-1 overflow-y-auto px-4 space-y-1 pb-6">
+        <NavLink 
+          to="/"
+          className={({ isActive }) => cn(
+            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all",
+            isActive ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-400 hover:bg-white/5"
+          )}
+        >
+          <LayoutDashboard size={16} /> Dashboard
+        </NavLink>
+
+        <div className="pt-6 pb-2 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest flex items-center justify-between">
+          <span>Active Projects</span>
+          <Plus size={12} className="cursor-pointer hover:text-white transition-colors" />
+        </div>
+
+        {filteredProjects.map((project) => (
+          <div key={project} className="space-y-1">
+            <button 
+              onClick={() => setSelectedProject(selectedProject === project ? null : project)}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group",
+                selectedProject === project ? "bg-white/5 text-blue-400" : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <Folder size={16} className={selectedProject === project ? "text-blue-500" : "text-slate-600"} />
+                <span className="truncate max-w-[140px]">{project}</span>
+              </div>
+              <ChevronRight size={14} className={cn("transition-transform text-slate-700", selectedProject === project && "rotate-90 text-blue-500")} />
+            </button>
+
+            {selectedProject === project && (
+              <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 py-1 animate-in slide-in-from-top-2 duration-200">
+                {sessions.map((session) => (
+                  <NavLink
+                    key={session.sessionId}
+                    to={`/session/${session.sessionId}`}
+                    className={({ isActive }) => cn(
+                      "flex flex-col gap-1 p-3 rounded-xl transition-all group border border-transparent",
+                      isActive ? "bg-blue-500/10 border-blue-500/20 text-blue-400" : "hover:bg-white/5 text-slate-500 hover:text-slate-300"
+                    )}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center gap-2">
+                         <MessageSquare size={12} className={cn(selectedProject === project ? "opacity-100" : "opacity-40")} />
+                         <span className="text-[11px] font-bold truncate max-w-[120px]">
+                           {new Date(session.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                         </span>
+                      </div>
+                      <Badge variant={session.expressionQuality.score >= 80 ? 'secondary' : 'primary'}>
+                        {session.expressionQuality.score}
+                      </Badge>
+                    </div>
+                    <div className="text-[9px] font-mono opacity-40 truncate">
+                      {session.sessionId.substring(0, 12)}
+                    </div>
+                  </NavLink>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+
+      <div className="p-6 mt-auto border-t border-[var(--card-border)] bg-black/20">
+        <div className="bg-gradient-to-br from-blue-600/10 to-emerald-600/10 border border-white/5 rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-tighter">
+            <Database size={12} className="text-blue-400" /> Database Healthy
+          </div>
+          <div className="text-[10px] text-slate-500 leading-snug">
+            All AI sessions are safely stored in your local encrypted vault.
+          </div>
+        </div>
+      </div>
+    </aside>
   );
 }

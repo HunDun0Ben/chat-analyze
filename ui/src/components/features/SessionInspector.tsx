@@ -1,8 +1,19 @@
-import { useState } from 'react';
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * Gemini Chat Analyze - Refactored SessionInspector
+ */
+
 import { Activity, Zap, MessageSquare, ShieldCheck, BarChart3, Download, Loader2, CheckCircle2, ArrowUpRight } from 'lucide-react';
-import type { AnalyzedSession } from '../types';
-import { exportSkill } from '../api';
-import { cn } from '../utils';
+import type { AnalyzedSession } from '../../types';
+import { cn } from '../../utils';
+import { useSessionExport } from '../../features/session/useSession';
+import { Tabs } from '../ui/Tabs';
+import { Badge } from '../ui/Badge';
+import { Progress } from '../ui/Progress';
+import { TokenBar } from './TokenBar';
+import { Button } from '../ui/Button';
+import { useState } from 'react';
 
 export function SessionInspector({ 
   session, 
@@ -14,20 +25,7 @@ export function SessionInspector({
   isCollapsed?: boolean
 }) {
   const [activeTab, setActiveTab] = useState<'intel' | 'timeline'>('timeline');
-  const [exporting, setExporting] = useState(false);
-  const [exported, setExported] = useState(false);
-
-  const handleExport = async () => {
-    setExporting(true);
-    try {
-      await exportSkill(session.sessionId);
-      setExported(true);
-      setTimeout(() => setExported(false), 3000);
-    } catch (e) {
-      alert('Export failed');
-    }
-    setExporting(false);
-  };
+  const { handleExport, exporting, exported } = useSessionExport();
 
   const getScoreColor = (s: number) => {
     if (s >= 90) return 'text-emerald-500';
@@ -35,32 +33,21 @@ export function SessionInspector({
     return 'text-rose-500';
   };
 
+  const tabs = [
+    { id: 'timeline', label: 'Timeline', icon: <MessageSquare size={14} /> },
+    { id: 'intel', label: 'Intel', icon: <Activity size={14} />, activeColor: "text-blue-400 bg-blue-500/5 border-blue-500" }
+  ];
+
   return (
     <aside className={cn(
       "border-l border-[var(--card-border)] bg-[var(--sidebar-bg)]/30 flex flex-col h-full shrink-0 transition-all duration-300 overflow-hidden",
       isCollapsed ? "w-0 border-l-0" : "w-80"
     )}>
-      {/* Tab Header */}
-      <div className="flex border-b border-[var(--card-border)] h-12 shrink-0 min-w-[320px]">
-        <button 
-          onClick={() => setActiveTab('timeline')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all",
-            activeTab === 'timeline' ? "text-amber-400 bg-amber-500/5 border-b-2 border-amber-500" : "text-slate-600 hover:text-slate-400 hover:bg-white/5"
-          )}
-        >
-          <MessageSquare size={14} /> Timeline
-        </button>
-        <button 
-          onClick={() => setActiveTab('intel')}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all",
-            activeTab === 'intel' ? "text-blue-400 bg-blue-500/5 border-b-2 border-blue-500" : "text-slate-600 hover:text-slate-400 hover:bg-white/5"
-          )}
-        >
-          <Activity size={14} /> Intel
-        </button>
-      </div>
+      <Tabs 
+        tabs={tabs} 
+        activeTab={activeTab} 
+        onTabChange={(id) => setActiveTab(id as any)} 
+      />
       
       <div className="flex-1 overflow-y-auto min-w-[320px]">
         {activeTab === 'intel' ? (
@@ -73,15 +60,13 @@ export function SessionInspector({
                    {session.expressionQuality.score}
                  </div>
                </div>
-               <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                 <div 
-                   className={cn("h-full transition-all duration-1000", 
-                     session.expressionQuality.score >= 90 ? 'bg-emerald-500' : 
-                     session.expressionQuality.score >= 70 ? 'bg-amber-500' : 'bg-rose-500'
-                   )}
-                   style={{ width: `${session.expressionQuality.score}%` }}
-                 />
-               </div>
+               <Progress 
+                 value={session.expressionQuality.score} 
+                 indicatorClassName={cn(
+                   session.expressionQuality.score >= 90 ? 'bg-emerald-500' : 
+                   session.expressionQuality.score >= 70 ? 'bg-amber-500' : 'bg-rose-500'
+                 )}
+               />
             </div>
 
             {/* Category & Status */}
@@ -111,9 +96,9 @@ export function SessionInspector({
               {session.expressionQuality.ambiguities.length > 0 && (
                 <div className="pt-2 flex flex-wrap gap-1.5 border-t border-blue-500/10">
                   {session.expressionQuality.ambiguities.map((a, i) => (
-                    <span key={i} className="text-[9px] bg-blue-500/10 text-blue-400 px-1.5 py-0.5 rounded-sm border border-blue-500/5 whitespace-nowrap">
+                    <Badge key={i} variant="primary" className="whitespace-nowrap">
                       {a}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               )}
@@ -167,38 +152,19 @@ export function SessionInspector({
       </div>
       
       <div className="mt-auto p-6 border-t border-[var(--card-border)] shrink-0 space-y-3 bg-[var(--sidebar-bg)]/50 min-w-[320px]">
-        <button 
-          onClick={handleExport}
+        <Button 
+          variant={exported ? 'success' : 'primary'}
+          onClick={() => handleExport(session.sessionId)}
           disabled={exporting}
-          className={cn(
-            "w-full py-2.5 rounded-lg text-xs font-bold transition-all border flex items-center justify-center gap-2 shadow-lg",
-            exported 
-            ? "bg-emerald-600 text-white border-emerald-500" 
-            : "bg-blue-600 hover:bg-blue-500 text-white border-blue-500"
-          )}
+          className="w-full"
         >
           {exporting ? <Loader2 className="animate-spin" size={14} /> : exported ? <CheckCircle2 size={14} /> : <Download size={14} />}
           {exported ? "Skill Exported" : "Incubate to SKILL.md"}
-        </button>
-        <button className="w-full py-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold transition-all border border-white/5 flex items-center justify-center gap-2 text-slate-400">
+        </Button>
+        <Button variant="secondary" className="w-full">
           Generate Full Report <ArrowUpRight size={14} />
-        </button>
+        </Button>
       </div>
     </aside>
-  );
-}
-
-function TokenBar({ label, value, max, color }: { label: string, value: number, max: number, color: string }) {
-  const percentage = Math.min((value / max) * 100, 100);
-  return (
-    <div className="space-y-1">
-      <div className="flex justify-between text-[10px]">
-        <span className="text-slate-500">{label}</span>
-        <span className="font-mono text-slate-400">{value.toLocaleString()}</span>
-      </div>
-      <div className="h-1 w-full bg-slate-900 rounded-full overflow-hidden">
-        <div className={cn("h-full", color)} style={{ width: `${percentage}%` }} />
-      </div>
-    </div>
   );
 }

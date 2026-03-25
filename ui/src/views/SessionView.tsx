@@ -1,3 +1,9 @@
+/**
+ * @license
+ * Copyright 2026 Google LLC
+ * Gemini Chat Analyze - Refactored SessionView
+ */
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, MessageSquare, Sparkles, Clock, User as UserIcon, Wrench, CheckCircle2, XCircle, ChevronDown, Lightbulb, PanelRightOpen, PanelRightClose } from 'lucide-react';
@@ -8,6 +14,7 @@ import { fetchSessionDetail } from '../api';
 import type { AnalyzedSession, ToolCall, MessageThought } from '../types';
 import { SessionInspector } from '../components/features/SessionInspector';
 import { cn } from '../utils';
+import { Badge } from '../components/ui/Badge';
 
 export function SessionView() {
   const { id } = useParams<{ id: string }>();
@@ -43,7 +50,6 @@ export function SessionView() {
     const element = document.getElementById(`msg-${messageId}`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Add a temporary highlight effect
       element.classList.add('ring-2', 'ring-blue-500/50', 'ring-offset-4', 'ring-offset-[var(--app-bg)]');
       setTimeout(() => {
         element.classList.remove('ring-2', 'ring-blue-500/50', 'ring-offset-4', 'ring-offset-[var(--app-bg)]');
@@ -69,9 +75,9 @@ export function SessionView() {
       {/* Header */}
       <div className="p-4 h-16 border-b border-[var(--card-border)] bg-[var(--app-bg)] flex justify-between items-center z-10">
         <div className="flex items-center gap-4">
-          <div className="bg-blue-500/10 text-blue-400 text-[10px] font-bold px-2 py-0.5 rounded border border-blue-500/20 tracking-tighter uppercase">
+          <Badge variant="primary" className="px-2 py-0.5 tracking-tighter">
             {session.projectName.split('/').pop()?.substring(0, 15)}
-          </div>
+          </Badge>
           <div className="text-[11px] text-slate-500 font-mono tracking-tighter hidden md:block">
             <span className="text-slate-700 mr-2">SESSION_ID:</span> {session.sessionId.substring(0, 32)}
           </div>
@@ -134,7 +140,7 @@ export function SessionView() {
                       children={m.content || ""}
                       components={{
                         code(props) {
-                          const {children, className} = props
+                          const {children, className} = (props as any)
                           const match = /language-(\w+)/.exec(className || '')
                           return match ? (
                             <SyntaxHighlighter
