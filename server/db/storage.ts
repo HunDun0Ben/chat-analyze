@@ -115,7 +115,7 @@ export class SessionStorage {
         modelId,
         COUNT(*) as sessionCount,
         AVG(score) as avgScore,
-        AVG(totalTokens) as avgTokens,
+        AVG(tokensTotal) as avgTokens,
         AVG(turns) as avgTurns
       FROM sessions
       GROUP BY modelId

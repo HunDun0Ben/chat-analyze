@@ -4,114 +4,71 @@
  * Gemini Chat Analyze - Project-Centric Session Manager
  */
 
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import { SessionParser } from './parser.js';
+import { DiscoveryService } from './services/DiscoveryService.js';
+import { SessionStorage } from '../db/storage.js';
 import { AnalyzedSession } from '../types/index.js';
 
 export class SessionManager {
   private sessions: Map<string, AnalyzedSession> = new Map();
   private parser: SessionParser = new SessionParser();
+  private discoveryService: DiscoveryService = new DiscoveryService();
+  private storage: SessionStorage;
 
-  constructor(private watchPaths: string[]) {}
+  constructor(private watchPaths: string[]) {
+    this.storage = new SessionStorage();
+  }
 
   /**
-   * 初始化所有监听路径
+   * 初始化所有监听路径并加载会话
    */
   async init() {
     console.log(`[Manager] Initializing from ${this.watchPaths.length} watch paths.`);
     const startTime = Date.now();
-    let totalLoaded = 0;
 
-    for (const watchPath of this.watchPaths) {
-      console.log(`[Manager] Scanning path: ${watchPath}`);
+    // 1. 从数据库加载现有会话
+    try {
+      const dbSessions = this.storage.getSessions();
+      for (const s of dbSessions) {
+        this.sessions.set(s.sessionId, s);
+      }
+      console.log(`[Manager] Loaded ${this.sessions.size} sessions from database.`);
+    } catch (err) {
+      console.error('[Manager] Failed to load sessions from database:', err);
+    }
+
+    // 2. 扫描文件系统以查找新会话或更新
+    const discovered = await this.discoveryService.scan(this.watchPaths);
+    console.log(`[Manager] Discovered ${discovered.length} potential session files.`);
+
+    let newOrUpdated = 0;
+    for (const item of discovered) {
       try {
-        const entries = await fs.readdir(watchPath, { withFileTypes: true });
+        const session = await this.parser.analyze(item.filePath);
         
-        // 1. 处理直接位于根目录下的零散会话文件 (如 ChatGPT 导出)
-        const rootFiles = entries
-          .filter(e => e.isFile() && e.name.endsWith('.json') && !['package.json', 'package-lock.json', 'tsconfig.json'].includes(e.name))
-          .map(e => path.join(watchPath, e.name));
-
-        for (const file of rootFiles) {
-          try {
-            const session = await this.parser.analyze(file);
-            if (session.projectName === 'Unknown') {
-              session.projectName = 'Imported';
-            }
-            this.sessions.set(session.sessionId, session);
-            totalLoaded++;
-          } catch (err) {
-            console.error(`[Manager] Error parsing root file ${file}:`, err);
-          }
+        // 智能项目命名：如果解析器没识别出来，使用发现服务提供的名字
+        if (session.projectName === 'Imported' || session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName)) {
+           session.projectName = item.projectName;
         }
 
-        // 2. 处理传统的 Gemini 项目文件夹结构
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            const projectName = entry.name;
-            const projectPath = path.join(watchPath, projectName);
-            
-            if (['node_modules', '.git', 'exports'].includes(projectName)) continue;
-
-            const sessionFiles: string[] = [];
-            await this.collectSessions(projectPath, sessionFiles);
-
-            if (sessionFiles.length > 0) {
-              console.log(`[Manager] Project [${projectName}]: Found ${sessionFiles.length} sessions.`);
-              for (const file of sessionFiles) {
-                try {
-                  const session = await this.parser.analyze(file);
-                  // 智能项目命名：嵌套目录下的文件优先使用目录名，除非是 ChatGPT 导入
-                  if (session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName) || session.projectHash !== 'chatgpt-import') {
-                    session.projectName = projectName;
-                  }
-                  
-                  this.sessions.set(session.sessionId, session);
-                  totalLoaded++;
-                } catch (err) {
-                  console.error(`[Manager] Error parsing ${file}:`, err);
-                }
-              }
-            }
-          }
+        const existing = this.sessions.get(session.sessionId);
+        if (!existing || existing.lastUpdated !== session.lastUpdated) {
+          this.storage.saveSession(session);
+          this.sessions.set(session.sessionId, session);
+          newOrUpdated++;
         }
       } catch (err) {
-        console.error(`[Manager] Failed to read path ${watchPath}:`, err);
+        // 忽略非 session 的 JSON 文件
       }
     }
 
-    console.log(`[Manager] Initialization complete. ${totalLoaded} sessions across ${this.getProjects().length} projects in ${Date.now() - startTime}ms.`);
-  }
-
-  /**
-   * 在项目文件夹内寻找 session 文件
-   */
-  private async collectSessions(dir: string, files: string[]) {
-    try {
-      const entries = await fs.readdir(dir, { withFileTypes: true });
-      for (const entry of entries) {
-        const fullPath = path.join(dir, entry.name);
-        if (entry.isDirectory()) {
-          if (entry.name === 'chats') {
-            await this.collectSessions(fullPath, files);
-          }
-        } else if (entry.isFile() && entry.name.endsWith('.json')) {
-          if (['package.json', 'package-lock.json', 'tsconfig.json'].includes(entry.name)) continue;
-          files.push(fullPath);
-        }
-      }
-    } catch (e) {}
+    console.log(`[Manager] Initialization complete. ${newOrUpdated} sessions updated. Total: ${this.sessions.size} in ${Date.now() - startTime}ms.`);
   }
 
   // --- API Methods ---
 
   getProjects(): string[] {
-    const projects = new Set<string>();
-    for (const session of this.sessions.values()) {
-      projects.add(session.projectName);
-    }
-    return Array.from(projects).sort();
+    return this.storage.getProjects().sort();
   }
 
   getSessionsByProject(projectName: string): AnalyzedSession[] {
@@ -121,71 +78,31 @@ export class SessionManager {
   }
 
   getSessionById(sessionId: string): AnalyzedSession | undefined {
-    return this.sessions.get(sessionId);
+    return this.sessions.get(sessionId) || this.storage.getSessionById(sessionId) || undefined;
   }
 
   getStatsTimeline(): { date: string; avgScore: number }[] {
-    const daily: Record<string, { total: number; count: number }> = {};
-    for (const session of this.sessions.values()) {
-      const date = session.startTime.split('T')[0];
-      if (!daily[date]) daily[date] = { total: 0, count: 0 };
-      daily[date].total += session.expressionQuality.score;
-      daily[date].count++;
-    }
-    return Object.entries(daily)
-      .map(([date, data]) => ({ date, avgScore: Math.round(data.total / data.count) }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-      .slice(-30);
+    return this.storage.getStatsTimeline();
   }
 
   getModelStats(): any[] {
-    const stats: Record<string, { sessionCount: number; totalScore: number; totalTokens: number; totalTurns: number }> = {};
-    for (const session of this.sessions.values()) {
-      const mId = session.modelId;
-      if (!stats[mId]) stats[mId] = { sessionCount: 0, totalScore: 0, totalTokens: 0, totalTurns: 0 };
-      stats[mId].sessionCount++;
-      stats[mId].totalScore += session.expressionQuality.score;
-      stats[mId].totalTokens += session.stats.tokenUsage.total;
-      stats[mId].totalTurns += session.stats.turns;
-    }
-    return Object.entries(stats)
-      .map(([modelId, data]) => ({
-        modelId,
-        sessionCount: data.sessionCount,
-        avgScore: Math.round(data.totalScore / data.sessionCount),
-        avgTokens: Math.round(data.totalTokens / data.sessionCount),
-        avgTurns: Math.round(data.totalTurns / data.sessionCount)
-      }))
-      .sort((a, b) => b.avgScore - a.avgScore);
+    return this.storage.getModelStats();
   }
 
   /**
-   * Watcher 调用此方法时，根据路径提取 Project Name
+   * 当监听到文件变动时调用
    */
   async upsertFromFile(filePath: string) {
     try {
       const session = await this.parser.analyze(filePath);
+      const projectName = this.discoveryService.resolveProjectName(filePath, this.watchPaths);
       
-      // 确定该文件属于哪个根目录
-      const rootPath = this.watchPaths.find(p => filePath.startsWith(p));
-      if (rootPath) {
-        const relative = path.relative(rootPath, filePath);
-        const parts = relative.split(path.sep);
-        
-        // 如果在子目录中
-        if (parts.length > 1) {
-          const projectName = parts[0];
-          if (session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName) || session.projectHash !== 'chatgpt-import') {
-            session.projectName = projectName;
-          }
-        } else {
-          // 在根目录下，如果没名字则标记为 Imported
-          if (session.projectName === 'Unknown') {
-            session.projectName = 'Imported';
-          }
-        }
+      // 保持项目名称一致性
+      if (session.projectName === 'Imported' || session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName)) {
+        session.projectName = projectName;
       }
       
+      this.storage.saveSession(session);
       this.sessions.set(session.sessionId, session);
       return session;
     } catch (err) {
