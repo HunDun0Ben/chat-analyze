@@ -1,48 +1,44 @@
-# 📊 数据结构与分析模型设计
+# 📊 数据结构与分析模型设计 - v1.2 (2026-03-25)
 
-## 1. 原始数据源 (Raw Data Sources)
-系统需监听并解析以下路径：
-- `~/.gemini/tmp/<project>/chats/session-*.json`: 会话详情、Token 消耗、工具调用。
-- `~/.gemini/tmp/<project>/logs.json`: 全量用户输入历史。
-- `~/.gemini/tmp/<project>/checkpoint-*.json`: 状态快照。
-- `~/.gemini/projects.json`: 项目路径与 Slug 映射表。
-
-## 2. 核心分析模型 (Analyzed Schema)
-解析器应将原始 JSON 转换为以下可分析模型：
+## 1. 核心模型 (Analyzed Session)
+系统已统一了不同 Provider（Gemini/ChatGPT）的数据接口，解析器会将其标准化为以下格式：
 
 ```typescript
-interface AnalyzedSession {
+export interface AnalyzedSession {
   sessionId: string;
   projectName: string;
-  modelId: string;       // 使用的模型 (如 gemini-1.5-pro)
-  category: 'Coding' | 'Learning' | 'Ops' | 'Arch'; // 自动分类
+  provider: 'gemini' | 'chatgpt'; // 新增：来源标识
+  modelId: string;               // 对应的模型标识
+  startTime: string;             // ISO 时间戳
+  lastUpdated: string;
+  category: SessionCategory;     // 自动分类结果
   
   // 表达质量分析 (Coach 模块)
   expressionQuality: {
-    score: number;       // 0-100 评分
-    ambiguities: string[]; // 发现的模糊点
-    suggestion: string;  // 改写建议
+    score: number;               // 0-100 综合评分
+    ambiguities: string[];        // 识别出的模糊词汇
+    suggestion: string;           // 针对性改进建议
   };
 
-  // 效率统计
+  // 消息内容 (标准化)
+  messages: Message[];           // 包含 User/Gemini/System/Tool/Thought 消息类型
+
+  // 效率统计 (Stats)
   stats: {
-    turns: number;        // 对话轮数
-    userTurns: number;    // 用户输入轮数
-    geminiTurns: number;  // 模型响应轮数
-    corrections: number;  // 纠错循环次数
-    toolChain: string[];  // 顺序轨迹：按时间戳排列的工具调用序列
+    turns: number;               // 总轮数
+    userTurns: number;           // 用户输入轮数
+    geminiTurns: number;         // 模型回复轮数
+    corrections: number;         // 纠错次数 (通过关键词与状态码识别)
+    toolChain: string[];         // 顺序轨迹 (仅 Gemini 支持)
     tokenUsage: {
-      input: number;      // 输入总消耗
-      output: number;     // 输出总消耗
-      thoughts: number;   // 思考过程消耗
-      total: number;      // 总消耗
+      input: number;
+      output: number;
+      thoughts: number;          // 思考链消耗 (Gemini 2.0+)
+      total: number;
     };
   };
-  
-  isStudyMode: boolean; // 是否为学习/代码阅读模式
 }
 ```
 
-## 3. 分类逻辑 (Classification Logic)
-- **Coding**: 涉及 `replace` 工具或包含“优化”、“重构”、“实现”等动词。
-- **Learning**: 包含“解释”、“原理”、“如何理解”或工具链中仅有读操作。
+## 2. 存储设计 (Storage Schema)
+SQLite 数据库（`chat_analyze.db`）表结构镜像了上述核心字段，以加速全文检索与特定条件查询。统计汇总则在内存中实时生成。

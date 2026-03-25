@@ -9,9 +9,11 @@ export type TaskCategory = 'Coding' | 'Learning' | 'Ops' | 'Arch' | 'Investigate
 export interface AnalyzedSession {
   sessionId: string;
   projectName: string;
+  sessionTitle?: string;  // 新增：用于在侧边栏显示的标题
   projectHash: string;
   modelId: string;       // Last used model
   category: TaskCategory;
+  provider: 'gemini' | 'chatgpt';
   
   startTime: string;     // ISO date
   lastUpdated: string;   // ISO date

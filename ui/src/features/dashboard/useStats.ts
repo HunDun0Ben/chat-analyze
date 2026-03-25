@@ -18,12 +18,15 @@ export function useStats() {
     setLoading(true);
     Promise.all([fetchStatsTimeline(), fetchModelStats()])
       .then(([timeline, modelStats]) => {
-        setData(timeline);
-        setModels(modelStats);
+        setData(Array.isArray(timeline) ? timeline : []);
+        setModels(Array.isArray(modelStats) ? modelStats : []);
         setLoading(false);
       })
       .catch(err => {
-        setError(err);
+        console.error('Failed to fetch stats:', err);
+        setError(err instanceof Error ? err : new Error(String(err)));
+        setData([]);
+        setModels([]);
         setLoading(false);
       });
   }, []);

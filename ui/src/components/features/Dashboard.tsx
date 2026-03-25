@@ -4,7 +4,7 @@
  * Gemini Chat Analyze - Refactored Dashboard
  */
 
-import { TrendingUp, Activity, Cpu, Brain, Award, ShieldCheck, Loader2 } from 'lucide-react';
+import { TrendingUp, Activity, Cpu, Brain, Award, ShieldCheck, Loader2, AlertCircle } from 'lucide-react';
 import { 
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area
 } from 'recharts';
@@ -15,7 +15,21 @@ import { Badge } from '../ui/Badge';
 import { Progress } from '../ui/Progress';
 
 export function Dashboard() {
-  const { data, models, loading } = useStats();
+  const { data, models, loading, error } = useStats();
+
+  if (error) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+        <div className="bg-red-500/10 p-6 rounded-full mb-6">
+           <AlertCircle size={48} className="text-red-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Sync Error</h2>
+        <p className="text-slate-500 max-w-md leading-relaxed">
+          Intelligence dashboard failed to synchronize with the backend engine. Please check if the server is running.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex flex-col bg-[var(--app-bg)] overflow-y-auto p-12 space-y-12 pb-32">
@@ -34,15 +48,18 @@ export function Dashboard() {
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="animate-spin text-slate-800" />
+          <div className="flex flex-col items-center gap-4">
+             <Loader2 className="animate-spin text-blue-600" size={32} />
+             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Parsing Session Files...</span>
+          </div>
         </div>
       ) : (
-        <div className="space-y-12 max-w-7xl mx-auto w-full">
+        <div className="space-y-12 max-w-7xl mx-auto w-full animate-in fade-in duration-500">
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Growth Chart */}
             <Card className="lg:col-span-2 group">
-              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+              <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
                 <Activity size={120} />
               </div>
               <CardHeader className="flex flex-row items-center gap-2">
@@ -62,7 +79,10 @@ export function Dashboard() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10}} dy={10} />
                       <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{fill: '#475569', fontSize: 10}} dx={-10} />
-                      <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px' }} />
+                      <Tooltip 
+                         contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '12px', fontSize: '10px' }} 
+                         itemStyle={{ fontWeight: 'bold' }}
+                      />
                       <Area type="monotone" dataKey="avgScore" stroke="#3b82f6" strokeWidth={3} fill="url(#colorScore)" animationDuration={2000} />
                     </AreaChart>
                   </ResponsiveContainer>
@@ -77,41 +97,47 @@ export function Dashboard() {
                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Model IQ Comparison</span>
                </CardHeader>
                <CardContent className="flex-1 flex flex-col justify-center gap-6">
-                 {models.map((m) => (
-                   <div key={m.modelId} className="space-y-2">
-                     <div className="flex justify-between items-end text-[11px]">
-                       <span className="font-bold text-slate-300 truncate max-w-[140px]">{m.modelId}</span>
-                       <span className="text-emerald-500 font-mono font-bold">{m.avgScore.toFixed(1)}%</span>
-                     </div>
-                     <Progress value={m.avgScore} indicatorClassName="bg-emerald-500/40" />
-                     <div className="flex justify-between text-[9px] text-slate-600">
-                       <span>{m.sessionCount} Sessions</span>
-                       <span>Avg. {Math.round(m.avgTokens / 1000)}k tokens</span>
-                     </div>
+                 {models.length > 0 ? (
+                   models.map((m) => (
+                    <div key={m.modelId} className="space-y-2">
+                      <div className="flex justify-between items-end text-[11px]">
+                        <span className="font-bold text-slate-300 truncate max-w-[140px]">{m.modelId}</span>
+                        <span className="text-emerald-500 font-mono font-bold">{m.avgScore.toFixed(1)}%</span>
+                      </div>
+                      <Progress value={m.avgScore} indicatorClassName="bg-emerald-500/40" />
+                      <div className="flex justify-between text-[9px] text-slate-600">
+                        <span>{m.sessionCount} Sessions</span>
+                        <span>Avg. {Math.round(m.avgTokens / 1000)}k tokens</span>
+                      </div>
+                    </div>
+                  ))
+                 ) : (
+                   <div className="text-center py-12 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+                     No Model Data
                    </div>
-                 ))}
+                 )}
                </CardContent>
             </Card>
           </div>
 
           {/* Quick Insights */}
-          <div className="grid grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <InsightCard 
               icon={<Brain className="text-amber-500" />} 
               title="Intelligence Peak" 
-              value={data.length > 0 ? `${Math.max(...data.map(d => d.avgScore))}%` : '--'}
+              value={data.length > 0 ? `${Math.round(Math.max(...data.map(d => d.avgScore)))}%` : '--'}
               desc="Highest daily average prompt quality"
             />
             <InsightCard 
               icon={<Award className="text-blue-500" />} 
               title="Champion Model" 
-              value={models[0]?.modelId.split('/').pop() || '--'}
+              value={models.length > 0 ? (models[0]?.modelId.split('/').pop() || '--') : '--'}
               desc="Best performing model by avg score"
             />
             <InsightCard 
               icon={<ShieldCheck className="text-emerald-500" />} 
               title="Skill Potentials" 
-              value="12" 
+              value={Math.floor(models.reduce((acc, m) => acc + m.sessionCount, 0) / 10).toString()} 
               desc="High-score sessions ready for incubation"
             />
           </div>

@@ -76,10 +76,11 @@ export class GeminiParser extends BaseParser {
 
     // Smart project naming: fallback to file path if name is a hash or missing
     let projectName = session.projectName || session.projectHash || "Unknown";
-    if (/^[a-f0-9]{64}$/.test(projectName)) {
+    if (/^[a-f0-9]{64}$/.test(projectName) || projectName === 'Unknown') {
       const parts = filePath.split(path.sep);
-      const chatsIdx = parts.indexOf('chats');
-      if (chatsIdx > 0) {
+      const chatsIdx = parts.lastIndexOf('chats');
+      if (chatsIdx > 1) {
+        // Path: .../<ProjectName>/chats/session.json
         projectName = parts[chatsIdx - 1];
       } else if (parts.length >= 2) {
         projectName = parts[parts.length - 2];
@@ -89,9 +90,11 @@ export class GeminiParser extends BaseParser {
     return {
       sessionId: session.sessionId,
       projectName,
+      sessionTitle: firstPrompt.substring(0, 50),
       projectHash: session.projectHash,
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || "unknown",
       category,
+      provider: 'gemini',
       startTime: session.startTime,
       lastUpdated: session.lastUpdated,
       expressionQuality: {

@@ -32,8 +32,14 @@ export interface SessionMessage {
 export interface AnalyzedSession {
   sessionId: string;
   projectName: string;
+  sessionTitle?: string;
+  projectHash: string;
   modelId: string;
   category: string;
+  provider: 'gemini' | 'chatgpt';
+  
+  startTime: string;
+  lastUpdated: string;
   expressionQuality: {
     score: number;
     ambiguities: string[];

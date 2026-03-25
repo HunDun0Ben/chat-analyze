@@ -4,18 +4,21 @@
  * Gemini Chat Analyze - Entry Point
  */
 
-import { ChatWatcher } from './core/watcher.js';
-import { startServer } from './api/server.js';
-import { SessionManager } from './core/manager.js';
 import path from 'node:path';
 import os from 'node:os';
+import { startServer } from './api/server.js';
+import { SessionManager } from './core/manager.js';
+import { SessionParser } from './core/parser.js';
+import { SessionStorage } from './db/storage.js';
+import { DiscoveryService } from './core/services/DiscoveryService.js';
+import { ChatWatcher } from './core/watcher.js';
 
 async function bootstrap() {
   const homeDir = os.homedir();
   
-  // 支持多个路径，用冒号分隔
-  // 例如：WATCH_PATHS="~/.gemini/tmp:/path/to/chatgpt"
-  const envPaths = process.env.WATCH_PATHS || process.env.WATCH_PATH || path.join(homeDir, '.gemini/tmp');
+  // 1. 解析监听路径
+  const defaultPath = path.join(homeDir, '.gemini/tmp');
+  const envPaths = process.env.WATCH_PATHS || process.env.WATCH_PATH || defaultPath;
   
   const watchPaths = envPaths.split(':').map(p => {
     let resolved = p.trim();
@@ -29,15 +32,26 @@ async function bootstrap() {
   console.log(`[System] Initializing with ${watchPaths.length} paths:`);
   watchPaths.forEach(p => console.log(`  - ${p}`));
   
-  // 1. 初始化内存管理器
-  const manager = new SessionManager(watchPaths);
-  await manager.init();
+  // 2. 实例化服务组件 (依赖注入)
+  const parser = new SessionParser();
+  const storage = new SessionStorage();
+  const discoveryService = new DiscoveryService();
 
-  // 2. 启动文件监听器
+  // 3. 初始化 Session 管理器
+  const manager = new SessionManager(watchPaths, parser, storage, discoveryService);
+  
+  // 启动时进行首次全量同步 (以目录为准)
+  try {
+    await manager.init();
+  } catch (err) {
+    console.error('[Manager] Initial synchronization failed:', err);
+  }
+
+  // 4. 启动文件监听器 (实时感知文件变动)
   const watcher = new ChatWatcher(watchPaths, manager);
   watcher.start();
 
-  // 3. 启动 API 服务器
+  // 5. 启动 API 服务器
   startServer(manager);
 
   console.log('[System] Service is ready.');
@@ -47,7 +61,7 @@ async function bootstrap() {
   process.on('SIGINT', async () => {
     console.log('\n[System] Shutting down...');
     try {
-      await watcher.stop();
+      watcher.stop();
     } catch (err) {
       console.error('Error during shutdown:', err);
     }

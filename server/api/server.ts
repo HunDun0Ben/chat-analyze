@@ -1,7 +1,7 @@
 /**
  * @license
  * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Express API Server
+ * Gemini Chat Analyze - API Server
  */
 
 import express from 'express';
@@ -15,78 +15,114 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export function startServer(manager: SessionManager) {
   const app = express();
-  const port = 3001;
+  const port = process.env.PORT || 3001;
 
   app.use(cors());
   app.use(express.json());
 
-  // API: List all projects
+  // --- Session API ---
+  // ... (保持之前定义的 API 不变)
+
   app.get('/api/projects', async (req, res) => {
     try {
-      const projects = manager.getProjects();
-      res.json(projects);
+      const { provider } = req.query;
+      res.json(manager.getProjects(provider as any));
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-  // API: List sessions under a project
-  app.get('/api/projects/:slug/sessions', async (req, res) => {
+  app.get('/api/projects/:projectName/sessions', async (req, res) => {
     try {
-      const { slug } = req.params;
-      const sessions = manager.getSessionsByProject(slug);
-      res.json(sessions);
+      res.json(manager.getSessionsByProject(req.params.projectName));
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-  // API: Get full session details
   app.get('/api/sessions/:id', async (req, res) => {
     try {
-      const { id } = req.params;
-      const session = manager.getSessionById(id);
-      if (!session) {
-        return res.status(404).json({ error: 'Session not found' });
-      }
+      const session = manager.getSession(req.params.id);
+      if (!session) return res.status(404).json({ error: 'Session not found' });
       res.json(session);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-  // API: Get stats timeline
-  app.get('/api/stats/timeline', (req, res) => {
+  // --- Stats API (Directly from Memory) ---
+
+  app.get('/api/stats/summary', async (req, res) => {
     try {
-      const timeline = manager.getStatsTimeline();
+      res.json(manager.getStats());
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/stats/timeline', async (req, res) => {
+    try {
+      const sessions = manager.getAllSessions();
+      const groups: Record<string, { totalScore: number; count: number }> = {};
+
+      sessions.forEach(s => {
+        const date = s.startTime.split('T')[0];
+        if (!groups[date]) groups[date] = { totalScore: 0, count: 0 };
+        groups[date].totalScore += s.expressionQuality.score;
+        groups[date].count++;
+      });
+
+      const timeline = Object.entries(groups)
+        .map(([date, data]) => ({
+          date,
+          avgScore: Math.round(data.totalScore / data.count)
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date));
+
       res.json(timeline);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-  // API: Get model performance stats
-  app.get('/api/stats/models', (req, res) => {
+  app.get('/api/stats/models', async (req, res) => {
     try {
-      const stats = manager.getModelStats();
-      res.json(stats);
+      const sessions = manager.getAllSessions();
+      const modelStats: Record<string, { count: number; totalScore: number; totalTokens: number; totalTurns: number }> = {};
+
+      sessions.forEach(s => {
+        const mid = s.modelId || 'unknown';
+        if (!modelStats[mid]) modelStats[mid] = { count: 0, totalScore: 0, totalTokens: 0, totalTurns: 0 };
+        modelStats[mid].count++;
+        modelStats[mid].totalScore += s.expressionQuality.score;
+        modelStats[mid].totalTokens += s.stats.tokenUsage.total;
+        modelStats[mid].totalTurns += s.stats.turns;
+      });
+
+      const result = Object.entries(modelStats).map(([modelId, data]) => ({
+        modelId,
+        sessionCount: data.count,
+        avgScore: Math.round(data.totalScore / data.count),
+        avgTokens: Math.round(data.totalTokens / data.count),
+        avgTurns: Math.round(data.totalTurns / data.count)
+      }));
+
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-  // API: Export session as SKILL.md
-  app.post('/api/sessions/:id/export-skill', (req, res) => {
+  app.post('/api/sessions/:id/export-skill', async (req, res) => {
     try {
-      const session = manager.getSessionById(req.params.id);
+      const session = manager.getSession(req.params.id);
       if (!session) return res.status(404).json({ error: 'Session not found' });
 
-      const skillName = session.projectName.split('/').pop() || 'new-skill';
-      const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages[0].content}\n- **Model**: ${session.modelId}\n`;
+      const skillName = session.sessionTitle || session.projectName.split('/').pop() || 'new-skill';
+      const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages.find(m => m.type === 'user')?.content || 'N/A'}\n- **Model**: ${session.modelId}\n`;
 
-      // 稳健的导出路径：始终相对于项目根目录
       const exportDir = path.resolve(__dirname, '../../exports/skills');
-      const exportPath = `${exportDir}/${skillName}-${session.sessionId.slice(0, 8)}.md`;
+      const exportPath = path.join(exportDir, `${skillName.replace(/[/\\?%*:|"<>\s]/g, '_')}-${session.sessionId.slice(0, 8)}.md`);
       
       if (!fs.existsSync(exportDir)) {
         fs.mkdirSync(exportDir, { recursive: true });

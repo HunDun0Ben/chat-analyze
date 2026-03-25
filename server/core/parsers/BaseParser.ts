@@ -9,6 +9,7 @@ import { CoachService } from '../services/CoachService.js';
 
 export interface ParserOptions {
   filePath: string;
+  fileName?: string;
 }
 
 export abstract class BaseParser {

@@ -27,8 +27,10 @@ export class SessionStorage {
       CREATE TABLE IF NOT EXISTS sessions (
         sessionId TEXT PRIMARY KEY,
         projectName TEXT,
+        sessionTitle TEXT,
         modelId TEXT,
         category TEXT,
+        provider TEXT,
         startTime TEXT,
         lastUpdated TEXT,
         score INTEGER,
@@ -44,15 +46,17 @@ export class SessionStorage {
   saveSession(session: AnalyzedSession) {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO sessions (
-        sessionId, projectName, modelId, category, startTime, lastUpdated, score, turns, tokensTotal, data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        sessionId, projectName, sessionTitle, modelId, category, provider, startTime, lastUpdated, score, turns, tokensTotal, data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       session.sessionId,
       session.projectName,
+      session.sessionTitle || null,
       session.modelId,
       session.category,
+      session.provider,
       session.startTime,
       session.lastUpdated,
       session.expressionQuality.score,
