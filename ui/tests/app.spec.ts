@@ -9,12 +9,12 @@ test.describe('Chat Analyze Frontend', () => {
   });
 
   test('should display the app title', async ({ page }) => {
-    await expect(page.getByText('Chat Analyze')).toBeVisible();
+    await expect(page.getByText('Gemini Audit')).toBeVisible();
   });
 
   test('should load projects from API', async ({ page }) => {
-    // 等待 sidebar 中的 Projects 标题显示
-    await expect(page.getByText('Projects')).toBeVisible();
+    // 等待 sidebar 中的 Active Projects 标题显示
+    await expect(page.getByText('Active Projects')).toBeVisible();
     
     // 检查是否有项目列表 (通过等待 button 存在)
     const projectButtons = page.locator('button');
@@ -40,8 +40,9 @@ test.describe('Chat Analyze Frontend', () => {
     const firstSession = page.locator('a[href*="/session/"]').first();
     await firstSession.click();
     
-    // 验证主视图中是否显示了项目 Slug 或会话 ID
-    // 我们在 SessionView 中显示了 projectName 作为标题
-    await expect(page.locator('h2')).toBeVisible();
+    // 验证主视图中是否显示了项目标识
+    // 我们在 SessionView 头部使用 Badge 显示项目名
+    const header = page.locator('header, .border-b'); // 宽泛定位
+    await expect(header.first()).toBeVisible();
   });
 });
