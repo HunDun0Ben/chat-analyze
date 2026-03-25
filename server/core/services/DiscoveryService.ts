@@ -5,12 +5,12 @@
  */
 
 import fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 export interface DiscoveryResult {
   filePath: string;
   projectName: string;
-  isChatGPT: boolean;
 }
 
 export class DiscoveryService {
@@ -26,28 +26,29 @@ export class DiscoveryService {
       try {
         const entries = await fs.readdir(watchPath, { withFileTypes: true });
         
-        // 1. Root level files (potential ChatGPT exports or standalone sessions)
+        // 1. Root level files
         const rootFiles = entries
           .filter(e => e.isFile() && e.name.endsWith('.json') && !this.isReservedConfig(e.name))
           .map(e => ({
             filePath: path.join(watchPath, e.name),
-            projectName: 'Imported',
-            isChatGPT: false // Will be refined by parser later
+            projectName: 'Imported'
           }));
         results.push(...rootFiles);
 
-        // 2. Project directories (Gemini style)
+        // 2. Project directories
         for (const entry of entries) {
           if (entry.isDirectory() && !this.ignoredDirs.includes(entry.name)) {
             const projectPath = path.join(watchPath, entry.name);
             const sessionFiles: string[] = [];
             await this.collectSessions(projectPath, sessionFiles);
 
-            results.push(...sessionFiles.map(file => ({
-              filePath: file,
-              projectName: entry.name,
-              isChatGPT: false
-            })));
+            for (const file of sessionFiles) {
+              const projectName = await this.resolveProjectName(file, [watchPath]);
+              results.push({
+                filePath: file,
+                projectName
+              });
+            }
           }
         }
       } catch (err) {
@@ -67,7 +68,6 @@ export class DiscoveryService {
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          // Look into subdirectories, but avoid known huge folders
           if (this.ignoredDirs.includes(entry.name)) continue;
           await this.collectSessions(fullPath, files);
         } else if (entry.isFile() && entry.name.endsWith('.json')) {
@@ -79,20 +79,45 @@ export class DiscoveryService {
   }
 
   /**
-   * Extract project name from a file path based on watch paths
+   * Extract project name from a file path based on watch paths.
+   * Supports .project_root or projects.json markers for deep projects.
    */
-  resolveProjectName(filePath: string, watchPaths: string[]): string {
+  async resolveProjectName(filePath: string, watchPaths: string[]): Promise<string> {
     const rootPath = watchPaths.find(p => filePath.startsWith(p));
     if (!rootPath) return 'Unknown';
 
+    // 1. Look for .project_root or projects.json markers upwards
+    let currentDir = path.dirname(filePath);
+    while (currentDir.startsWith(rootPath) && currentDir !== rootPath) {
+      try {
+        const markerExists = await this.hasMarker(currentDir);
+        if (markerExists) {
+          return path.basename(currentDir);
+        }
+      } catch (e) {}
+      const parent = path.dirname(currentDir);
+      if (parent === currentDir) break;
+      currentDir = parent;
+    }
+
+    // 2. Fallback to first-level directory
     const relative = path.relative(rootPath, filePath);
     const parts = relative.split(path.sep);
     
     if (parts.length > 1) {
-      return parts[0]; // First directory name is the project name
+      return parts[0]; 
     }
     
     return 'Imported';
+  }
+
+  private async hasMarker(dir: string): Promise<boolean> {
+    try {
+      const files = await fs.readdir(dir);
+      return files.includes('.project_root') || files.includes('projects.json');
+    } catch {
+      return false;
+    }
   }
 
   private isReservedConfig(filename: string): boolean {

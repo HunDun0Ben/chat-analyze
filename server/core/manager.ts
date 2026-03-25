@@ -95,7 +95,7 @@ export class SessionManager {
   async upsertFromFile(filePath: string) {
     try {
       const session = await this.parser.analyze(filePath);
-      const projectName = this.discoveryService.resolveProjectName(filePath, this.watchPaths);
+      const projectName = await this.discoveryService.resolveProjectName(filePath, this.watchPaths);
       
       // 保持项目名称一致性
       if (session.projectName === 'Imported' || session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName)) {
