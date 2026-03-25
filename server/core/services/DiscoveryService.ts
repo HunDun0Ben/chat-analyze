@@ -100,12 +100,12 @@ export class DiscoveryService {
       currentDir = parent;
     }
 
-    // 2. Fallback to first-level directory
+    // 2. Fallback to full relative directory path
     const relative = path.relative(rootPath, filePath);
-    const parts = relative.split(path.sep);
+    const dirName = path.dirname(relative);
     
-    if (parts.length > 1) {
-      return parts[0]; 
+    if (dirName !== '.') {
+      return dirName.replace(/\\/g, '/') + '/'; // Ensure forward slashes and trailing slash
     }
     
     return 'Imported';

@@ -126,12 +126,14 @@ export class ChatGPTParser extends BaseParser {
 
     const correctionCount = this.coachService.countCorrections(userMsgs, resultMessages);
 
-    return {
+    const result: AnalyzedSession = {
       sessionId: session.conversation_id || session.id,
-      projectName: session.title || "ChatGPT Import",
+      projectName: "ChatGPT Import",
+      sessionTitle: options.fileName || session.title || "ChatGPT Chat",
       projectHash: "chatgpt-import",
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || "chatgpt",
       category: this.coachService.detectCategory(firstPrompt, toolChain),
+      provider: 'chatgpt',
       startTime: session.create_time ? new Date(session.create_time * 1000).toISOString() : new Date().toISOString(),
       lastUpdated: session.update_time ? new Date(session.update_time * 1000).toISOString() : new Date().toISOString(),
       expressionQuality: {
@@ -149,5 +151,13 @@ export class ChatGPTParser extends BaseParser {
       },
       messages: resultMessages
     };
+
+    // If there's a title in the JSON and it's different from the filename, 
+    // maybe append it to make it more descriptive when multiple sessions exist in one file
+    if (session.title && options.fileName && session.title !== options.fileName) {
+       result.sessionTitle = `${options.fileName} (${session.title})`;
+    }
+
+    return result;
   }
 }

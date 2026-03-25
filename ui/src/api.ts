@@ -1,8 +1,11 @@
 export const API_BASE = 'http://localhost:3001/api';
 
-export const fetchProjects = () => fetch(`${API_BASE}/projects`).then(r => r.json());
+export const fetchProjects = (provider?: 'gemini' | 'chatgpt') => {
+  const url = provider ? `${API_BASE}/projects?provider=${provider}` : `${API_BASE}/projects`;
+  return fetch(url).then(r => r.json());
+};
 
-export const fetchSessions = (slug: string) => fetch(`${API_BASE}/projects/${slug}/sessions`).then(r => r.json());
+export const fetchSessions = (slug: string) => fetch(`${API_BASE}/projects/${encodeURIComponent(slug)}/sessions`).then(r => r.json());
 
 export const fetchSessionDetail = (id: string) => fetch(`${API_BASE}/sessions/${id}`).then(r => {
   if (!r.ok) throw new Error('Not Found');

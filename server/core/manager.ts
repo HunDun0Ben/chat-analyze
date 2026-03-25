@@ -1,113 +1,108 @@
 /**
  * @license
  * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Project-Centric Session Manager
+ * Gemini Chat Analyze - Optimized Session Manager (Filesystem-First)
  */
 
-import { SessionParser } from './parser.js';
-import { DiscoveryService } from './services/DiscoveryService.js';
-import { SessionStorage } from '../db/storage.js';
-import { AnalyzedSession } from '../types/index.js';
+import path from 'node:path';
+import { SessionParser } from './parser';
+import { SessionStorage } from '../db/storage';
+import { DiscoveryService } from './services/DiscoveryService';
+import { AnalyzedSession } from '../types';
 
 export class SessionManager {
   private sessions: Map<string, AnalyzedSession> = new Map();
-  private parser: SessionParser = new SessionParser();
-  private discoveryService: DiscoveryService = new DiscoveryService();
-  private storage: SessionStorage;
+  private readonly watchPaths: string[];
+  private readonly parser: SessionParser;
+  private readonly storage: SessionStorage;
+  private readonly discoveryService: DiscoveryService;
 
-  constructor(private watchPaths: string[]) {
-    this.storage = new SessionStorage();
+  constructor(watchPaths: string[], parser: SessionParser, storage: SessionStorage, discoveryService: DiscoveryService) {
+    this.watchPaths = watchPaths;
+    this.parser = parser;
+    this.storage = storage;
+    this.discoveryService = discoveryService;
   }
 
   /**
-   * 初始化所有监听路径并加载会话
+   * Initialize: Full Directory Scan (Source of Truth)
+   * High-performance parallel scanning and parsing.
    */
   async init() {
-    console.log(`[Manager] Initializing from ${this.watchPaths.length} watch paths.`);
     const startTime = Date.now();
+    console.log(`[Manager] Scanning directories: ${this.watchPaths.join(', ')}`);
 
-    // 1. 从数据库加载现有会话
-    try {
-      const dbSessions = this.storage.getSessions();
-      for (const s of dbSessions) {
-        this.sessions.set(s.sessionId, s);
-      }
-      console.log(`[Manager] Loaded ${this.sessions.size} sessions from database.`);
-    } catch (err) {
-      console.error('[Manager] Failed to load sessions from database:', err);
-    }
-
-    // 2. 扫描文件系统以查找新会话或更新
+    // 1. Scan filesystem
     const discovered = await this.discoveryService.scan(this.watchPaths);
     console.log(`[Manager] Discovered ${discovered.length} potential session files.`);
 
-    let newOrUpdated = 0;
-    for (const item of discovered) {
-      try {
-        const session = await this.parser.analyze(item.filePath);
-        
-        // 智能项目命名：如果解析器没识别出来，使用发现服务提供的名字
-        if (session.projectName === 'Imported' || session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName)) {
-           session.projectName = item.projectName;
-        }
+    // 2. Clear old memory for fresh sync (Direct from directory)
+    this.sessions.clear();
 
-        const existing = this.sessions.get(session.sessionId);
-        if (!existing || existing.lastUpdated !== session.lastUpdated) {
-          this.storage.saveSession(session);
-          this.sessions.set(session.sessionId, session);
-          newOrUpdated++;
+    // 3. Parallel parsing with allSettled to ensure 100% resilience
+    const parseResults = await Promise.allSettled(discovered.map(async (item) => {
+      const result = await this.parser.analyze(item.filePath);
+      const sessions = Array.isArray(result) ? result : [result];
+      
+      return sessions.map(session => {
+        // Smart project naming fallback
+        if (session.projectName === 'Imported' || session.projectName === 'Unknown' || session.projectName === 'ChatGPT Import' || /^[a-f0-9]{64}$/.test(session.projectName)) {
+          session.projectName = item.projectName;
         }
-      } catch (err) {
-        // 忽略非 session 的 JSON 文件
+        return session;
+      });
+    }));
+    
+    // 4. Update memory and persistence
+    for (const result of parseResults) {
+      if (result.status === 'fulfilled' && result.value) {
+        for (const session of result.value) {
+          this.sessions.set(session.sessionId, session);
+          this.storage.saveSession(session);
+        }
       }
     }
 
-    console.log(`[Manager] Initialization complete. ${newOrUpdated} sessions updated. Total: ${this.sessions.size} in ${Date.now() - startTime}ms.`);
+    console.log(`[Manager] Sync complete. ${this.sessions.size} valid sessions loaded in ${Date.now() - startTime}ms.`);
   }
 
   // --- API Methods ---
 
-  getProjects(): string[] {
-    return this.storage.getProjects().sort();
+  getProjects(provider?: 'gemini' | 'chatgpt'): string[] {
+    return Array.from(this.sessions.values())
+      .filter(s => !provider || s.provider === provider)
+      .map(s => s.projectName)
+      .filter((v, i, a) => a.indexOf(v) === i)
+      .sort();
   }
 
   getSessionsByProject(projectName: string): AnalyzedSession[] {
     return Array.from(this.sessions.values())
       .filter(s => s.projectName === projectName)
-      .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      .sort((a, b) => b.startTime.localeCompare(a.startTime));
   }
 
-  getSessionById(sessionId: string): AnalyzedSession | undefined {
-    return this.sessions.get(sessionId) || this.storage.getSessionById(sessionId) || undefined;
+  getSession(sessionId: string): AnalyzedSession | null {
+    return this.sessions.get(sessionId) || null;
   }
 
-  getStatsTimeline(): { date: string; avgScore: number }[] {
-    return this.storage.getStatsTimeline();
+  getAllSessions(): AnalyzedSession[] {
+    return Array.from(this.sessions.values());
   }
 
-  getModelStats(): any[] {
-    return this.storage.getModelStats();
+  getStats() {
+    const sessions = this.getAllSessions();
+    if (sessions.length === 0) return { total: 0, avgScore: 0, totalTokens: 0 };
+    
+    return {
+      total: sessions.length,
+      avgScore: sessions.reduce((acc, s) => acc + s.expressionQuality.score, 0) / sessions.length,
+      totalTokens: sessions.reduce((acc, s) => acc + s.stats.tokenUsage.total, 0),
+    };
   }
 
-  /**
-   * 当监听到文件变动时调用
-   */
-  async upsertFromFile(filePath: string) {
-    try {
-      const session = await this.parser.analyze(filePath);
-      const projectName = await this.discoveryService.resolveProjectName(filePath, this.watchPaths);
-      
-      // 保持项目名称一致性
-      if (session.projectName === 'Imported' || session.projectName === 'Unknown' || /^[a-f0-9]{64}$/.test(session.projectName)) {
-        session.projectName = projectName;
-      }
-      
-      this.storage.saveSession(session);
-      this.sessions.set(session.sessionId, session);
-      return session;
-    } catch (err) {
-      console.error(`[Manager] Upsert failed for ${filePath}:`, err);
-      throw err;
-    }
+  async refresh() {
+    await this.init();
+    return this.getAllSessions();
   }
 }

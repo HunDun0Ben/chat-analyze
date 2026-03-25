@@ -5,6 +5,7 @@
  */
 
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import { AnalyzedSession } from '../types/index.js';
 import { CoachService } from './services/CoachService.js';
 import { GeminiParser } from './parsers/GeminiParser.js';
@@ -26,21 +27,40 @@ export class SessionParser {
    * Main entry point for session analysis.
    * Detects the format and delegates to the appropriate parser.
    */
-  async analyze(filePath: string): Promise<AnalyzedSession> {
+  async analyze(filePath: string): Promise<AnalyzedSession | AnalyzedSession[]> {
     const rawData = await fs.readFile(filePath, 'utf-8');
-    let session: any;
+    let sessionData: any;
     try {
-      session = JSON.parse(rawData);
+      sessionData = JSON.parse(rawData);
     } catch (err) {
       throw new Error(`Invalid JSON format: ${(err as Error).message}`);
     }
 
-    if (!session || typeof session !== 'object') {
-      throw new Error('Invalid session data: Not an object');
+    if (!sessionData) {
+      throw new Error('Invalid session data: Empty or null');
     }
 
-    const parser = this.getParser(session);
-    return parser.analyze(session, { filePath });
+    const fileName = path.basename(filePath, '.json');
+
+    // Support ChatGPT export arrays
+    if (Array.isArray(sessionData)) {
+      const results: AnalyzedSession[] = [];
+      for (const item of sessionData) {
+        try {
+          const parser = this.getParser(item);
+          if (parser) {
+            results.push(await parser.analyze(item, { filePath, fileName }));
+          }
+        } catch (e) {
+          // Skip invalid entries in arrays
+          console.warn(`[Parser] Skipping invalid session in ${fileName}`);
+        }
+      }
+      return results;
+    }
+
+    const parser = this.getParser(sessionData);
+    return parser.analyze(sessionData, { filePath, fileName });
   }
 
   /**
