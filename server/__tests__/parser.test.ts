@@ -44,6 +44,7 @@ describe('SessionParser', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
+    if (Array.isArray(result)) throw new Error('Expected single session');
     expect(result.projectName).toBe('my-cool-project');
   });
 
@@ -64,6 +65,7 @@ describe('SessionParser', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
+    if (Array.isArray(result)) throw new Error('Expected single session');
     expect(result.projectName).toBe('ValidProjectName');
   });
 
@@ -84,6 +86,7 @@ describe('SessionParser', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
+    if (Array.isArray(result)) throw new Error('Expected single session');
     expect(result.projectName).toBe('simple-dir');
   });
 });

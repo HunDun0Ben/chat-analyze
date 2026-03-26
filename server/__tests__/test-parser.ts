@@ -26,10 +26,13 @@ async function runTest() {
     const file = jsonFiles[0];
     const filePath = path.join(chatsDir, file);
     const result = await parser.analyze(filePath);
+    const sessions = Array.isArray(result) ? result : [result];
     
     console.log(`\n--- Single File Storage Test: ${file} ---`);
-    storage.saveSession(result);
-    console.log(`- Saved session to SQLite.`);
+    for (const session of sessions) {
+      storage.saveSession(session);
+    }
+    console.log(`- Saved ${sessions.length} session(s) to SQLite.`);
 
     const saved = storage.getSessions({ limit: 1 });
     if (saved.length > 0) {

@@ -40,6 +40,27 @@ export function startServer(manager: SessionManager) {
     }
   });
 
+  app.get('/api/sessions/summary', async (req, res) => {
+    try {
+      const sessions = manager.getAllSessions();
+      // 返回精简版，用于搜索和侧边栏显示
+      const summary = sessions.map(s => ({
+        sessionId: s.sessionId,
+        sessionTitle: s.sessionTitle,
+        projectName: s.projectName,
+        provider: s.provider,
+        startTime: s.startTime,
+        isCheckpoint: s.isCheckpoint,
+        expressionQuality: { score: s.expressionQuality.score },
+        // 只取第一条用户消息作为标题回退
+        firstMessage: s.messages.find(m => m.type === 'user')?.content || ''
+      }));
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   app.get('/api/sessions/:id', async (req, res) => {
     try {
       const session = manager.getSession(req.params.id);

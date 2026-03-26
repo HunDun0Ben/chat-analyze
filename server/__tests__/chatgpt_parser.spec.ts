@@ -82,6 +82,7 @@ describe('SessionParser (ChatGPT Unification)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockChatGPT));
 
     const result = await parser.analyze(filePath);
+    if (Array.isArray(result)) throw new Error('Expected single session');
 
     // Verify aggregation
     expect(result.messages.length).toBe(2); // One user, one assistant (unified)
@@ -147,6 +148,8 @@ describe('SessionParser (ChatGPT Unification)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockChatGPT));
 
     const result = await parser.analyze(filePath);
+    if (Array.isArray(result)) throw new Error('Expected single session');
+    
     expect(result.messages.length).toBe(3);
     expect(result.messages[0].type).toBe('user');
     expect(result.messages[1].type).toBe('gemini');

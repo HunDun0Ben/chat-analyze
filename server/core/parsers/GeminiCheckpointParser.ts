@@ -94,16 +94,16 @@ export class GeminiCheckpointParser extends BaseParser {
     const category = this.coachService.detectCategory(firstPrompt, toolChain);
     const correctionCount = this.coachService.countCorrections(userMsgs, messages);
 
-    const projectName = this.extractProjectName(fileName);
+    const projectName = this.extractProjectName(fileName || "Unknown");
     const sessionId = this.generateSessionId(filePath);
 
     // 优先使用完整的文件名（已解码）作为 sessionTitle
-    let sessionTitle = fileName.replace(/^checkpoint-/, '').replace(/\.json$/, '');
+    let sessionTitle = (fileName || "checkpoint").replace(/^checkpoint-/, '').replace(/\.json$/, '');
     try {
       sessionTitle = decodeURIComponent(sessionTitle).replace(/^["']/, '').replace(/["']$/, '');
     } catch {
       // 如果解码失败，回退到首条消息或原始文件名
-      sessionTitle = firstPrompt.substring(0, 50) || fileName;
+      sessionTitle = firstPrompt.substring(0, 50) || (fileName || "checkpoint");
     }
 
     return {
