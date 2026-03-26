@@ -10,6 +10,7 @@ export interface AnalyzedSession {
   sessionId: string;
   projectName: string;
   sessionTitle?: string;  // 新增：用于在侧边栏显示的标题
+  isCheckpoint?: boolean; // 新增：标识是否为 Checkpoint 文件
   projectHash: string;
   modelId: string;       // Last used model
   category: TaskCategory;
@@ -63,8 +64,8 @@ export interface MessageThought {
 export interface ToolCall {
   id: string;
   name: string;
-  args: Record<string, any>;
-  result?: any;
+  args: Record<string, unknown>;
+  result?: unknown;
   status: 'success' | 'failure' | 'pending';
   timestamp: string;
   description?: string;

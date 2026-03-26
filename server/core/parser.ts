@@ -10,17 +10,20 @@ import { AnalyzedSession } from '../types/index.js';
 import { CoachService } from './services/CoachService.js';
 import { GeminiParser } from './parsers/GeminiParser.js';
 import { ChatGPTParser } from './parsers/ChatGPTParser.js';
+import { GeminiCheckpointParser } from './parsers/GeminiCheckpointParser.js';
 import { BaseParser } from './parsers/BaseParser.js';
 
 export class SessionParser {
   private coachService: CoachService;
   private geminiParser: GeminiParser;
   private chatGPTParser: ChatGPTParser;
+  private geminiCheckpointParser: GeminiCheckpointParser;
 
   constructor() {
     this.coachService = new CoachService();
     this.geminiParser = new GeminiParser(this.coachService);
     this.chatGPTParser = new ChatGPTParser(this.coachService);
+    this.geminiCheckpointParser = new GeminiCheckpointParser(this.coachService);
   }
 
   /**
@@ -73,6 +76,11 @@ export class SessionParser {
       return this.chatGPTParser;
     }
     
+    // Detect Gemini API History (Checkpoint) format
+    if (s && s.history && Array.isArray(s.history)) {
+      return this.geminiCheckpointParser;
+    }
+
     // Default to Gemini parser
     return this.geminiParser;
   }

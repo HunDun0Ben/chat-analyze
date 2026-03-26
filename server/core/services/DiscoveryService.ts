@@ -83,7 +83,6 @@ export class DiscoveryService {
   private isIgnoredDir(name: string): boolean {
     return (
       this.ignoredDirs.includes(name) || 
-      name.startsWith('checkpoint-') || 
       name === 'community-plugins'
     );
   }
@@ -91,8 +90,7 @@ export class DiscoveryService {
   private isIgnoredFile(name: string): boolean {
     const baseName = name.endsWith('.json') ? name.slice(0, -5) : name;
     return (
-      baseName === 'community-plugins' || 
-      baseName.startsWith('checkpoint-')
+      baseName === 'community-plugins'
     );
   }
 
