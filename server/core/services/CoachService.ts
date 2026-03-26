@@ -27,7 +27,7 @@ export class CoachService {
     score -= (ambiguities.length * 10);
     
     // 4. Missing context penalty
-    const hasContext = /[\/\.\w]+\.\w+|`{1,3}|@\w+/.test(prompt);
+    const hasContext = /[/.\w]+\.\w+|`{1,3}|@\w+/.test(prompt);
     if (!hasContext && prompt.length > 20) score -= 10;
 
     return Math.max(0, Math.min(100, score));
@@ -115,7 +115,7 @@ export class CoachService {
 
     // Tool failures (implicit correction)
     const toolFailures = allMsgs.flatMap(m => m.toolCalls || [])
-      .filter(tc => tc.status === 'error' || tc.status === 'failure').length;
+      .filter(tc => tc.status === 'failure').length;
 
     return userCount + toolFailures;
   }

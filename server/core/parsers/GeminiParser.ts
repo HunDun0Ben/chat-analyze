@@ -12,40 +12,41 @@ import {
 import { BaseParser, ParserOptions } from './BaseParser.js';
 
 export class GeminiParser extends BaseParser {
-  async analyze(session: any, options: ParserOptions): Promise<AnalyzedSession> {
+  async analyze(session: unknown, options: ParserOptions): Promise<AnalyzedSession> {
     const { filePath } = options;
+    const s = session as Record<string, unknown>; 
 
-    if (!Array.isArray(session.messages)) {
+    if (!s || !Array.isArray(s.messages)) {
       throw new Error('Not a valid Gemini session: Missing "messages" array');
     }
 
-    const messages: SessionMessage[] = session.messages.map((m: any) => {
+    const messages: SessionMessage[] = (s.messages as Record<string, unknown>[]).map((m: Record<string, unknown>) => {
       const msg: SessionMessage = {
-        id: m.id,
-        timestamp: m.timestamp,
-        type: m.type,
+        id: (m.id as string) || "",
+        timestamp: (m.timestamp as string) || "",
+        type: (m.type as 'user' | 'gemini' | 'info') || 'info',
         content: this.extractContent(m.content),
-        model: m.model,
+        model: m.model as string | undefined,
         displayContent: this.extractContent(m.displayContent) || undefined,
       };
 
       if (m.thoughts) {
-        msg.thoughts = m.thoughts.map((t: any) => ({
-          subject: t.subject,
-          description: t.description,
-          timestamp: t.timestamp
+        msg.thoughts = (m.thoughts as Record<string, unknown>[]).map((t: Record<string, unknown>) => ({
+          subject: (t.subject as string) || "",
+          description: (t.description as string) || "",
+          timestamp: (t.timestamp as string) || ""
         }));
       }
 
       if (m.toolCalls) {
-        msg.toolCalls = m.toolCalls.map((tc: any) => ({
-          id: tc.id,
-          name: tc.name,
-          args: tc.args,
+        msg.toolCalls = (m.toolCalls as Record<string, unknown>[]).map((tc: Record<string, unknown>) => ({
+          id: (tc.id as string) || "",
+          name: (tc.name as string) || "",
+          args: (tc.args as Record<string, unknown>) || {},
           result: tc.result,
-          status: tc.status,
-          timestamp: tc.timestamp,
-          description: tc.description
+          status: (tc.status as 'success' | 'failure' | 'pending') || 'pending',
+          timestamp: (tc.timestamp as string) || "",
+          description: tc.description as string | undefined
         }));
       }
 
@@ -57,15 +58,16 @@ export class GeminiParser extends BaseParser {
     
     const toolChain = messages
       .flatMap(m => m.toolCalls || [])
-      .sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0))
+      .sort((a, b) => Number(a.timestamp || 0) - Number(b.timestamp || 0))
       .map(tc => tc.name);
     
-    const tokenUsage = session.messages.reduce((acc: any, m: any) => {
-      if (m.type === 'gemini' && m.tokens) {
-        acc.input += m.tokens.input || 0;
-        acc.output += m.tokens.output || 0;
-        acc.thoughts += m.tokens.thoughts || 0;
-        acc.total += m.tokens.total || 0;
+    const tokenUsage = (s.messages as Record<string, unknown>[]).reduce((acc: { input: number; output: number; thoughts: number; total: number }, m: Record<string, unknown>) => {
+      const tokens = m.tokens as Record<string, number> | undefined;
+      if (m.type === 'gemini' && tokens) {
+        acc.input += tokens.input || 0;
+        acc.output += tokens.output || 0;
+        acc.thoughts += tokens.thoughts || 0;
+        acc.total += tokens.total || 0;
       }
       return acc;
     }, { input: 0, output: 0, thoughts: 0, total: 0 });
@@ -75,7 +77,7 @@ export class GeminiParser extends BaseParser {
     const correctionCount = this.coachService.countCorrections(userMsgs, messages);
 
     // Smart project naming: fallback to file path if name is a hash or missing
-    let projectName = session.projectName || session.projectHash || "Unknown";
+    let projectName = (s.projectName as string) || (s.projectHash as string) || "Unknown";
     if (/^[a-f0-9]{64}$/.test(projectName) || projectName === 'Unknown') {
       const parts = filePath.split(path.sep);
       const chatsIdx = parts.lastIndexOf('chats');
@@ -88,15 +90,15 @@ export class GeminiParser extends BaseParser {
     }
 
     return {
-      sessionId: session.sessionId,
+      sessionId: (s.sessionId as string) || "",
       projectName,
       sessionTitle: firstPrompt.substring(0, 50),
-      projectHash: session.projectHash,
+      projectHash: (s.projectHash as string) || "",
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || "unknown",
       category,
       provider: 'gemini',
-      startTime: session.startTime,
-      lastUpdated: session.lastUpdated,
+      startTime: (s.startTime as string) || "",
+      lastUpdated: (s.lastUpdated as string) || "",
       expressionQuality: {
         score: this.coachService.calculateQualityScore(correctionCount, firstPrompt),
         ambiguities: this.coachService.detectAmbiguities(firstPrompt),

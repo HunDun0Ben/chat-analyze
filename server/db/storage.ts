@@ -66,9 +66,9 @@ export class SessionStorage {
     );
   }
 
-  getSessions(query: { category?: string; limit?: number } = {}) {
+  getSessions(query: { category?: string; limit?: number } = {}): AnalyzedSession[] {
     let sql = 'SELECT * FROM sessions';
-    const params: any[] = [];
+    const params: (string | number)[] = [];
 
     if (query.category) {
       sql += ' WHERE category = ?';
@@ -82,17 +82,17 @@ export class SessionStorage {
       params.push(query.limit);
     }
 
-    const rows = this.db.prepare(sql).all(...params);
-    return rows.map((row: any) => JSON.parse(row.data) as AnalyzedSession);
+    const rows = this.db.prepare(sql).all(...params) as { data: string }[];
+    return rows.map((row) => JSON.parse(row.data) as AnalyzedSession);
   }
 
   getSessionById(sessionId: string): AnalyzedSession | null {
-    const row = this.db.prepare('SELECT data FROM sessions WHERE sessionId = ?').get(sessionId) as any;
+    const row = this.db.prepare('SELECT data FROM sessions WHERE sessionId = ?').get(sessionId) as { data: string } | undefined;
     return row ? JSON.parse(row.data) as AnalyzedSession : null;
   }
 
   getProjects(): string[] {
-    const rows = this.db.prepare('SELECT DISTINCT projectName FROM sessions').all() as any[];
+    const rows = this.db.prepare('SELECT DISTINCT projectName FROM sessions').all() as { projectName: string }[];
     return rows.map(row => row.projectName);
   }
 
@@ -106,14 +106,14 @@ export class SessionStorage {
       ORDER BY date ASC
       LIMIT 30
     `;
-    const rows = this.db.prepare(sql).all() as any[];
+    const rows = this.db.prepare(sql).all() as { date: string; avgScore: number }[];
     return rows.map(row => ({
       date: row.date,
       avgScore: Math.round(row.avgScore)
     }));
   }
 
-  getModelStats(): any[] {
+  getModelStats(): { modelId: string; sessionCount: number; avgScore: number; avgTokens: number; avgTurns: number }[] {
     const sql = `
       SELECT 
         modelId,
@@ -125,7 +125,7 @@ export class SessionStorage {
       GROUP BY modelId
       ORDER BY avgScore DESC
     `;
-    return this.db.prepare(sql).all();
+    return this.db.prepare(sql).all() as { modelId: string; sessionCount: number; avgScore: number; avgTokens: number; avgTurns: number }[];
   }
 
   close() {

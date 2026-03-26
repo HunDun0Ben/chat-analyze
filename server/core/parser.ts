@@ -29,7 +29,7 @@ export class SessionParser {
    */
   async analyze(filePath: string): Promise<AnalyzedSession | AnalyzedSession[]> {
     const rawData = await fs.readFile(filePath, 'utf-8');
-    let sessionData: any;
+    let sessionData: unknown;
     try {
       sessionData = JSON.parse(rawData);
     } catch (err) {
@@ -51,24 +51,25 @@ export class SessionParser {
           if (parser) {
             results.push(await parser.analyze(item, { filePath, fileName }));
           }
-        } catch (e) {
-          // Skip invalid entries in arrays
-          console.warn(`[Parser] Skipping invalid session in ${fileName}`);
+        } catch {
+          // Silently skip invalid entries in arrays (common in ChatGPT exports)
         }
       }
       return results;
     }
 
     const parser = this.getParser(sessionData);
+    if (!parser) throw new Error('Could not determine session format');
     return parser.analyze(sessionData, { filePath, fileName });
   }
 
   /**
    * Detects session format based on JSON structure
    */
-  private getParser(session: any): BaseParser {
+  private getParser(session: unknown): BaseParser | null {
+    const s = session as Record<string, unknown>;
     // Detect ChatGPT export format
-    if (session.mapping && (session.conversation_id || session.id)) {
+    if (s && s.mapping && (s.conversation_id || s.id)) {
       return this.chatGPTParser;
     }
     

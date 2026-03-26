@@ -20,26 +20,27 @@ export class SessionParser {
     const session = JSON.parse(rawData);
 
     // 1. 提取基础信息
-    const userMessages = session.messages.filter((m: any) => m.type === 'user');
-    const geminiMessages = session.messages.filter((m: any) => m.type === 'gemini');
+    const userMessages = session.messages.filter((m: { type: string }) => m.type === 'user');
+    const geminiMessages = session.messages.filter((m: { type: string }) => m.type === 'gemini');
     
     // 2. 获取初始提问 (用于教练分析)
     const firstPrompt = userMessages[0]?.content?.[0]?.text || "";
 
     // 3. 提取工具链 (用于模式识别)
-    const toolChain = geminiMessages.flatMap((m: any) => 
-      (m.toolCalls || []).map((tc: any) => tc.name)
+    const toolChain = geminiMessages.flatMap((m: { toolCalls?: { name: string }[] }) => 
+      (m.toolCalls || []).map((tc) => tc.name)
     );
 
     // 4. 识别纠错行为 (检测用户的不满或修正习惯)
-    const correctionCount = userMessages.filter((m: any) => 
+    const correctionCount = userMessages.filter((m: { content?: { text: string }[] }) => 
       /不对|理解错了|不是这个|重新|报错了/.test(m.content?.[0]?.text || "")
     ).length;
 
     // 5. 组装分析结果
+    const firstGeminiMsg = geminiMessages[0] as { model?: string } | undefined;
     return {
       sessionId: session.sessionId,
-      modelId: geminiMessages[0]?.model || "unknown",
+      modelId: firstGeminiMsg?.model || "unknown",
       category: this.detectCategory(firstPrompt, toolChain),
       quality: {
         clarityScore: correctionCount > 0 ? 60 : 100,

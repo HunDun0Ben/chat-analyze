@@ -5,7 +5,6 @@
  */
 
 import fs from 'node:fs/promises';
-import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 export interface DiscoveryResult {
@@ -14,7 +13,7 @@ export interface DiscoveryResult {
 }
 
 export class DiscoveryService {
-  private readonly ignoredDirs = ['node_modules', '.git', 'exports', 'dist', 'build'];
+  private readonly ignoredDirs = ['node_modules', '.git', 'exports', 'dist', 'build', 'logs'];
 
   /**
    * Scan multiple watch paths for session files
@@ -29,6 +28,7 @@ export class DiscoveryService {
         // 1. Root level files
         const rootFiles = entries
           .filter(e => e.isFile() && e.name.endsWith('.json') && !this.isReservedConfig(e.name))
+          .filter(e => !this.isIgnoredFile(e.name))
           .map(e => ({
             filePath: path.join(watchPath, e.name),
             projectName: 'Imported'
@@ -37,7 +37,7 @@ export class DiscoveryService {
 
         // 2. Project directories
         for (const entry of entries) {
-          if (entry.isDirectory() && !this.ignoredDirs.includes(entry.name)) {
+          if (entry.isDirectory() && !this.isIgnoredDir(entry.name)) {
             const projectPath = path.join(watchPath, entry.name);
             const sessionFiles: string[] = [];
             await this.collectSessions(projectPath, sessionFiles);
@@ -68,14 +68,32 @@ export class DiscoveryService {
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
-          if (this.ignoredDirs.includes(entry.name)) continue;
+          if (this.isIgnoredDir(entry.name)) continue;
           await this.collectSessions(fullPath, files);
         } else if (entry.isFile() && entry.name.endsWith('.json')) {
-          if (this.isReservedConfig(entry.name)) continue;
+          if (this.isReservedConfig(entry.name) || this.isIgnoredFile(entry.name)) continue;
           files.push(fullPath);
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      console.error(`Error collecting sessions from ${dir}:`, e);
+    }
+  }
+
+  private isIgnoredDir(name: string): boolean {
+    return (
+      this.ignoredDirs.includes(name) || 
+      name.startsWith('checkpoint-') || 
+      name === 'community-plugins'
+    );
+  }
+
+  private isIgnoredFile(name: string): boolean {
+    const baseName = name.endsWith('.json') ? name.slice(0, -5) : name;
+    return (
+      baseName === 'community-plugins' || 
+      baseName.startsWith('checkpoint-')
+    );
   }
 
   /**
@@ -94,18 +112,25 @@ export class DiscoveryService {
         if (markerExists) {
           return path.basename(currentDir);
         }
-      } catch (e) {}
+      } catch {
+        // Silently fail if directory read fails during project resolution
+      }
       const parent = path.dirname(currentDir);
       if (parent === currentDir) break;
       currentDir = parent;
     }
 
-    // 2. Fallback to full relative directory path
+    // 2. Fallback to first level directory name relative to watch root
     const relative = path.relative(rootPath, filePath);
-    const dirName = path.dirname(relative);
+    const dirParts = path.dirname(relative).split(path.sep);
     
-    if (dirName !== '.') {
-      return dirName.replace(/\\/g, '/') + '/'; // Ensure forward slashes and trailing slash
+    // If the file is directly under a project directory or a sub-directory like 'chats'
+    if (dirParts.length > 0 && dirParts[0] !== '.') {
+      // If the first part is 'chats', that's not a project name, try to get more context
+      if (dirParts[0] === 'chats' && dirParts.length > 1) {
+         return dirParts[1];
+      }
+      return dirParts[0];
     }
     
     return 'Imported';

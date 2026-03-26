@@ -18,12 +18,12 @@ export abstract class BaseParser {
   /**
    * Main analysis method to be implemented by sub-classes
    */
-  abstract analyze(rawData: any, options: ParserOptions): Promise<AnalyzedSession>;
+  abstract analyze(rawData: unknown, options: ParserOptions): Promise<AnalyzedSession>;
 
   /**
    * Helper to recursively extract content from complex objects
    */
-  protected extractContent(content: any): string {
+  protected extractContent(content: unknown): string {
     if (!content) return "";
     if (typeof content === 'string') return content;
     
@@ -31,12 +31,13 @@ export abstract class BaseParser {
       return content.map(c => this.extractContent(c)).join("\n");
     }
 
-    if (typeof content === 'object') {
-      if (Array.isArray(content.parts)) {
-        return content.parts.map((p: any) => typeof p === 'string' ? p : this.extractContent(p)).join("\n");
+    if (typeof content === 'object' && content !== null) {
+      const obj = content as Record<string, unknown>;
+      if (Array.isArray(obj.parts)) {
+        return obj.parts.map((p: unknown) => typeof p === 'string' ? p : this.extractContent(p)).join("\n");
       }
-      if (content.text) return content.text;
-      if (content.value) return this.extractContent(content.value);
+      if (typeof obj.text === 'string') return obj.text;
+      if (obj.value) return this.extractContent(obj.value);
     }
 
     return "";

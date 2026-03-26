@@ -4,11 +4,10 @@
  * Gemini Chat Analyze - Optimized Session Manager (Filesystem-First)
  */
 
-import path from 'node:path';
-import { SessionParser } from './parser';
-import { SessionStorage } from '../db/storage';
-import { DiscoveryService } from './services/DiscoveryService';
-import { AnalyzedSession } from '../types';
+import { SessionParser } from './parser.js';
+import { SessionStorage } from '../db/storage.js';
+import { DiscoveryService } from './services/DiscoveryService.js';
+import { AnalyzedSession } from '../types/index.js';
 
 export class SessionManager {
   private sessions: Map<string, AnalyzedSession> = new Map();
@@ -40,7 +39,7 @@ export class SessionManager {
     this.sessions.clear();
 
     // 3. Parallel parsing with allSettled to ensure 100% resilience
-    const parseResults = await Promise.allSettled(discovered.map(async (item) => {
+    const parseResults = await Promise.allSettled(discovered.map(async (item: { filePath: string; projectName: string }) => {
       const result = await this.parser.analyze(item.filePath);
       const sessions = Array.isArray(result) ? result : [result];
       
@@ -104,5 +103,24 @@ export class SessionManager {
   async refresh() {
     await this.init();
     return this.getAllSessions();
+  }
+
+  /**
+   * Single file update/add (Used by Watcher)
+   */
+  async upsertFromFile(filePath: string): Promise<AnalyzedSession> {
+    const result = await this.parser.analyze(filePath);
+    const sessions = Array.isArray(result) ? result : [result];
+    
+    // For single file, we take the last session or most relevant
+    const session = sessions[sessions.length - 1];
+    
+    // Update memory
+    for (const s of sessions) {
+      this.sessions.set(s.sessionId, s);
+      this.storage.saveSession(s);
+    }
+    
+    return session;
   }
 }

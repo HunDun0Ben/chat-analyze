@@ -26,7 +26,7 @@ export function startServer(manager: SessionManager) {
   app.get('/api/projects', async (req, res) => {
     try {
       const { provider } = req.query;
-      res.json(manager.getProjects(provider as any));
+      res.json(manager.getProjects(provider as 'gemini' | 'chatgpt' | undefined));
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
@@ -119,7 +119,7 @@ export function startServer(manager: SessionManager) {
       if (!session) return res.status(404).json({ error: 'Session not found' });
 
       const skillName = session.sessionTitle || session.projectName.split('/').pop() || 'new-skill';
-      const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages.find(m => m.type === 'user')?.content || 'N/A'}\n- **Model**: ${session.modelId}\n`;
+      const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages.find((m: { type: string; content: string }) => m.type === 'user')?.content || 'N/A'}\n- **Model**: ${session.modelId}\n`;
 
       const exportDir = path.resolve(__dirname, '../../exports/skills');
       const exportPath = path.join(exportDir, `${skillName.replace(/[/\\?%*:|"<>\s]/g, '_')}-${session.sessionId.slice(0, 8)}.md`);

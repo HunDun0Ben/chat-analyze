@@ -4,7 +4,7 @@
  * Gemini Chat Analyze - File System Watcher Implementation
  */
 
-import chokidar from 'chokidar';
+import * as chokidar from 'chokidar';
 import path from 'node:path';
 import { SessionManager } from './manager.js';
 
@@ -32,23 +32,23 @@ export class ChatWatcher {
   start() {
     console.log(`[Watcher] Monitoring for chat updates in ${this.watchPaths.length} paths.`);
 
-    this.watcher.on('add', async (filePath) => {
+    this.watcher.on('add', async (filePath: string) => {
       console.log(`[Detected]: ${path.basename(filePath)}`);
       try {
         const session = await this.manager.upsertFromFile(filePath);
         console.log(`  - Loaded [${session.projectName}] into memory`);
       } catch (err) {
-        // Error already logged in manager
+        console.error(`Failed to load session from ${filePath}:`, err);
       }
     });
 
-    this.watcher.on('change', async (filePath) => {
+    this.watcher.on('change', async (filePath: string) => {
       console.log(`[Session Updated]: ${path.basename(filePath)}`);
       try {
         await this.manager.upsertFromFile(filePath);
         console.log(`  - Memory cache updated.`);
       } catch (err) {
-        // Error already logged in manager
+        console.error(`Failed to update session from ${filePath}:`, err);
       }
     });
   }
