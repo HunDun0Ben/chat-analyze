@@ -4,7 +4,6 @@
  * Gemini Chat Analyze - TokenBar Component
  */
 
-import React from 'react';
 import { Progress } from '../ui/Progress';
 
 interface TokenBarProps {

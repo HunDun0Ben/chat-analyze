@@ -6,7 +6,7 @@
 
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Search, Folder, MessageSquare, Zap, ChevronRight, LayoutDashboard, Database, Sparkles, MessageCircle } from 'lucide-react';
+import { Search, Folder, Zap, ChevronRight, LayoutDashboard, Database, Sparkles, MessageCircle } from 'lucide-react';
 import { fetchProjects, fetchSessions } from '../../api';
 import type { AnalyzedSession } from '../../types';
 import { cn } from '../../utils';
@@ -24,8 +24,6 @@ export function Sidebar() {
 
   useEffect(() => {
     fetchProjects(activeProvider).then(setProjects);
-    setSelectedProject(null);
-    setSessions([]);
   }, [activeProvider]);
 
   useEffect(() => {
@@ -67,7 +65,7 @@ export function Sidebar() {
         tabs={tabs} 
         activeTab={activeProvider} 
         onTabChange={(id) => {
-          setActiveProvider(id as any);
+          setActiveProvider(id as ProviderType);
           setSelectedProject(null);
           setSessions([]);
         }} 
@@ -195,6 +193,7 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession, 
   return (
     <NavLink
       to={`/session/${session.sessionId}`}
+      data-testid={`session-link-${session.sessionId}`}
       className={({ isActive }) => cn(
         "flex flex-col gap-1.5 p-3 rounded-xl transition-all group border border-transparent",
         isActive ? colors[variant] : "hover:bg-white/5 text-slate-500 hover:text-slate-300"

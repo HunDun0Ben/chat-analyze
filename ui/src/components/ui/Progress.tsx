@@ -4,7 +4,6 @@
  * Gemini Chat Analyze - Progress Atomic Component
  */
 
-import React from 'react';
 import { cn } from '../../utils';
 
 interface ProgressProps {

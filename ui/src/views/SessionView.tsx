@@ -22,17 +22,15 @@ const MemoizedCodeBlock = memo(({ language, value }: { language: string, value: 
       PreTag="div"
       children={value}
       language={language}
-      style={vscDarkPlus as any}
+      style={vscDarkPlus as Record<string, React.CSSProperties>}
       className="rounded-lg !my-4 !bg-transparent border border-white/5"
     />
   );
 });
 
-const MemoizedMessage = memo(({ m, sessionModelId, onThoughtsToggle, onToolsToggle }: { 
+const MemoizedMessage = memo(({ m, sessionModelId }: { 
   m: SessionMessage, 
-  sessionModelId: string,
-  onThoughtsToggle?: () => void,
-  onToolsToggle?: () => void
+  sessionModelId: string
 }) => {
   return (
     <div 
@@ -64,14 +62,16 @@ const MemoizedMessage = memo(({ m, sessionModelId, onThoughtsToggle, onToolsTogg
         )}
         
         <div className={cn(
-          "prose prose-invert prose-slate prose-sm max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/5 prose-code:text-blue-400/90 leading-relaxed",
+          "prose prose-invert prose-slate prose-sm max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/5 prose-code:text-blue-400 prose-code:font-bold prose-hr:my-8 prose-hr:border-white/10 leading-relaxed",
           m.type === 'user' ? 'text-[var(--user-text)]' : 'text-slate-300'
         )}>
           <ReactMarkdown
-            children={m.content || ""}
+            children={(m.content as string) || ""}
             components={{
-              code(props) {
-                const {children, className} = (props as any)
+              hr() {
+                return <hr className="my-12 border-white/10" />
+              },
+              code({children, className}) {
                 const match = /language-(\w+)/.exec(className || '')
                 return match ? (
                   <MemoizedCodeBlock 
@@ -79,8 +79,8 @@ const MemoizedMessage = memo(({ m, sessionModelId, onThoughtsToggle, onToolsTogg
                     value={String(children).replace(/\n$/, '')} 
                   />
                 ) : (
-                  <code className={cn("bg-white/10 px-1.5 py-0.5 rounded text-blue-300", className)}>
-                    {children}
+                  <code className={cn("bg-slate-800/80 px-1.5 py-0.5 rounded text-blue-300 font-mono font-bold border border-white/10 mx-0.5 shadow-sm text-[0.85em]", className)}>
+                    {String(children)}
                   </code>
                 )
               }
@@ -105,11 +105,17 @@ export function SessionView() {
   const [session, setSession] = useState<AnalyzedSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+  const [prevId, setPrevId] = useState<string | undefined>(undefined);
+
+  // Synchronously adjust state when id changes to avoid useEffect setState warning
+  if (id !== prevId) {
+    setPrevId(id);
+    if (id) setLoading(true);
+  }
 
   useEffect(() => {
     let isMounted = true;
     if (id) {
-      if (isMounted) setLoading(true);
       fetchSessionDetail(id)
         .then(data => {
           if (isMounted) {
@@ -145,7 +151,7 @@ export function SessionView() {
     return session.messages.map((m) => (
       <MemoizedMessage key={m.id} m={m} sessionModelId={session.modelId} />
     ));
-  }, [session?.messages, session?.modelId]);
+  }, [session]);
 
   if (loading) return (
     <div className="flex-1 flex flex-col items-center justify-center bg-[var(--app-bg)] text-slate-600">
@@ -235,9 +241,9 @@ function ToolTimeline({ tools }: { tools: ToolCall[] }) {
                 <pre className="text-[10px] text-slate-400 bg-black/30 p-2 rounded-md overflow-x-auto border border-white/5">
                   {JSON.stringify(t.args, null, 2)}
                 </pre>
-                {t.result && (
+                {!!t.result && (
                   <pre className="text-[10px] text-emerald-400/70 bg-black/30 p-2 rounded-md overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto border border-emerald-900/10">
-                    {typeof t.result === 'string' ? t.result : JSON.stringify(t.result, null, 2)}
+                    {typeof t.result === 'string' ? t.result : JSON.stringify(t.result as Record<string, unknown>, null, 2)}
                   </pre>
                 )}
               </div>
@@ -268,7 +274,7 @@ function ThoughtViewer({ thoughts }: { thoughts?: MessageThought[] }) {
           {thoughts.map((thought, i) => (
             <div key={i} className="text-[11px] leading-relaxed text-slate-400/90">
               <span className="text-amber-600/60 font-medium mr-2">#{thought.subject}</span>
-              {thought.description}
+              {thought.description as string}
             </div>
           ))}
         </div>
