@@ -5,7 +5,6 @@ import {
   Folder,
   Zap,
   ChevronRight,
-  LayoutDashboard,
   Database,
   Sparkles,
   MessageCircle,
@@ -118,14 +117,14 @@ export function Sidebar() {
     <aside className="w-72 border-r border-[var(--card-border)] bg-[var(--sidebar-bg)] flex flex-col h-full shrink-0 z-20">
       <div className="p-6 space-y-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <NavLink to="/" className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
               <Zap size={18} className="text-white" fill="white" />
             </div>
             <div className="font-bold text-[var(--text-main)] tracking-tight">
               Gemini Audit
             </div>
-          </div>
+          </NavLink>
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] transition-colors"
@@ -161,21 +160,7 @@ export function Sidebar() {
         className="mx-4 mb-4 border-b-0 gap-1"
       />
 
-      <nav className="flex-1 overflow-y-auto px-4 space-y-1 pb-6">
-        <NavLink
-          to="/"
-          className={({ isActive }) =>
-            cn(
-              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all mb-4',
-              isActive
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                : 'text-slate-400 hover:bg-white/5',
-            )
-          }
-        >
-          <LayoutDashboard size={16} /> Dashboard
-        </NavLink>
-
+      <nav className="flex-1 overflow-y-auto px-4 space-y-1 pb-6 mb-4">
         <div className="pt-2 pb-2 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest flex justify-between items-center">
           <span>
             {activeProvider === 'gemini'
