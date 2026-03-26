@@ -13,7 +13,13 @@
     "dev:ui": "npm run dev -w ui",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
     "build": "npm run build --workspaces",
-    "test": "npm run test --workspaces"
+    "test": "npm run test -w @chat-analyze/server",
+    "test:ui": "npm run test -w ui",
+    "lint": "npm run lint --workspaces",
+    "typecheck": "concurrently \"npm run typecheck:ui\" \"npm run typecheck:server\"",
+    "typecheck:ui": "cd ui && npx tsc -b",
+    "typecheck:server": "cd server && npx tsc --noEmit",
+    "preflight": "npm run lint && npm run typecheck && npm run test && npm run build"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
