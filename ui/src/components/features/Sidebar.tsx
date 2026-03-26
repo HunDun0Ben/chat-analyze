@@ -203,21 +203,29 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession, 
         <div className="flex justify-between items-start gap-2">
           <div className="flex-1 min-w-0">
              <div className={cn(
-               "text-[11px] font-bold truncate leading-tight mb-0.5",
+               "text-[11px] font-bold truncate leading-tight mb-0.5 flex items-center gap-1.5",
                isActive ? (variant === 'blue' ? "text-blue-300" : "text-emerald-300") : "text-slate-300 group-hover:text-white"
              )}>
-               {displayTitle}
+               <span className="truncate">{displayTitle}</span>
              </div>
              
              <div className="flex items-center justify-between mt-1 gap-2">
-               <span className={cn(
-                 "font-mono text-[10px] font-bold tracking-tight shrink-0",
-                 isActive 
-                   ? (variant === 'blue' ? "text-blue-200" : "text-emerald-200") 
-                   : (variant === 'blue' ? "text-blue-500/80" : "text-emerald-500/80")
-               )}>
-                 {session.sessionId.substring(0, 8)}
-               </span>
+               <div className="flex items-center gap-2">
+                 <span className={cn(
+                   "font-mono text-[10px] font-bold tracking-tight shrink-0",
+                   isActive 
+                     ? (variant === 'blue' ? "text-blue-200" : "text-emerald-200") 
+                     : (variant === 'blue' ? "text-blue-500/80" : "text-emerald-500/80")
+                 )}>
+                   {session.sessionId.substring(0, 8)}
+                 </span>
+                 
+                 {session.isCheckpoint && (
+                   <span className="shrink-0 bg-blue-500/20 text-blue-400 text-[8px] px-1 rounded border border-blue-500/30 uppercase tracking-tighter">
+                     CP
+                   </span>
+                 )}
+               </div>
 
                <span className="text-[9px] font-medium opacity-40 whitespace-nowrap overflow-hidden text-right">
                  {new Date(session.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}

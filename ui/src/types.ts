@@ -9,8 +9,8 @@ export interface SessionSummary {
 export interface ToolCall {
   id: string;
   name: string;
-  args: any;
-  result?: any;
+  args: Record<string, unknown>;
+  result?: unknown;
   status: 'success' | 'failure' | 'pending';
   timestamp: string;
 }
@@ -33,6 +33,7 @@ export interface AnalyzedSession {
   sessionId: string;
   projectName: string;
   sessionTitle?: string;
+  isCheckpoint?: boolean; // 新增：标识是否为 Checkpoint 文件
   projectHash: string;
   modelId: string;
   category: string;
