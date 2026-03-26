@@ -7,6 +7,8 @@ export const fetchProjects = (provider?: 'gemini' | 'chatgpt') => {
 
 export const fetchSessions = (slug: string) => fetch(`${API_BASE}/projects/${encodeURIComponent(slug)}/sessions`).then(r => r.json());
 
+export const fetchSessionsSummary = () => fetch(`${API_BASE}/sessions/summary`).then(r => r.json());
+
 export const fetchSessionDetail = (id: string) => fetch(`${API_BASE}/sessions/${id}`).then(r => {
   if (!r.ok) throw new Error('Not Found');
   return r.json();

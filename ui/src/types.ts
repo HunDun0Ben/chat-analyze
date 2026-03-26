@@ -1,3 +1,14 @@
+export interface SidebarSession {
+  sessionId: string;
+  sessionTitle?: string;
+  projectName: string;
+  provider: 'gemini' | 'chatgpt';
+  startTime: string;
+  isCheckpoint?: boolean;
+  expressionQuality: { score: number };
+  firstMessage?: string;
+}
+
 export interface SessionSummary {
   sessionId: string;
   projectName: string;
