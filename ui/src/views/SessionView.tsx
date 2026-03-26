@@ -9,28 +9,30 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Loader2, MessageSquare, Sparkles, Clock, User as UserIcon, Wrench, CheckCircle2, XCircle, ChevronDown, Lightbulb, PanelRightOpen, PanelRightClose } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { vscDarkPlus, prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { fetchSessionDetail } from '../api';
 import type { AnalyzedSession, ToolCall, MessageThought, SessionMessage } from '../types';
 import { SessionInspector } from '../components/features/SessionInspector';
 import { cn } from '../utils';
 import { Badge } from '../components/ui/Badge';
+import { useTheme } from '../features/theme/useTheme';
 
-const MemoizedCodeBlock = memo(({ language, value }: { language: string, value: string }) => {
+const MemoizedCodeBlock = memo(({ language, value, theme }: { language: string, value: string, theme: string }) => {
   return (
     <SyntaxHighlighter
       PreTag="div"
       children={value}
       language={language}
-      style={vscDarkPlus as Record<string, React.CSSProperties>}
-      className="rounded-lg !my-4 !bg-transparent border border-white/5"
+      style={(theme === 'dark' ? vscDarkPlus : prism) as Record<string, React.CSSProperties>}
+      className="rounded-lg !my-4 !bg-[var(--gemini-bg)] border border-[var(--card-border)]"
     />
   );
 });
 
-const MemoizedMessage = memo(({ m, sessionModelId }: { 
+const MemoizedMessage = memo(({ m, sessionModelId, theme }: { 
   m: SessionMessage, 
-  sessionModelId: string
+  sessionModelId: string,
+  theme: string
 }) => {
   return (
     <div 
@@ -46,30 +48,30 @@ const MemoizedMessage = memo(({ m, sessionModelId }: {
         m.type === 'user' 
         ? 'bg-[var(--user-bg)] border border-[var(--user-border)]' 
         : m.type === 'info'
-        ? 'bg-transparent border-none text-slate-600 text-[11px] text-center italic py-2 px-12 opacity-60'
-        : 'bg-[var(--gemini-bg)] border border-[var(--gemini-border)] shadow-black/40'
+        ? 'bg-transparent border-none text-[var(--text-dim)] text-[11px] text-center italic py-2 px-12 opacity-60'
+        : 'bg-[var(--gemini-bg)] border border-[var(--gemini-border)] shadow-black/5 dark:shadow-black/40'
       )}>
         {m.type !== 'info' && (
-          <div className="flex items-center justify-between gap-6 mb-3 text-[9px] font-bold uppercase tracking-wider border-b border-white/5 pb-2">
-            <div className="flex items-center gap-2 text-slate-500">
-              {m.type === 'user' ? <UserIcon size={11} /> : <Sparkles size={11} className="text-blue-400" />}
-              <span className={cn(m.type === 'gemini' && "text-blue-400/80")}>{m.type === 'gemini' ? sessionModelId : 'User'}</span>
+          <div className="flex items-center justify-between gap-6 mb-3 text-[9px] font-bold uppercase tracking-wider border-b border-[var(--card-border)] pb-2">
+            <div className="flex items-center gap-2 text-[var(--text-muted)]">
+              {m.type === 'user' ? <UserIcon size={11} /> : <Sparkles size={11} className="text-blue-500" />}
+              <span className={cn(m.type === 'gemini' && "text-blue-500/80")}>{m.type === 'gemini' ? sessionModelId : 'User'}</span>
             </div>
-            <div className="flex items-center gap-2 text-slate-600 font-mono">
+            <div className="flex items-center gap-2 text-[var(--text-dim)] font-mono">
               <Clock size={10} /> {new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           </div>
         )}
         
         <div className={cn(
-          "prose prose-invert prose-slate prose-sm max-w-none prose-pre:bg-black/40 prose-pre:border prose-pre:border-white/5 prose-code:text-blue-400 prose-code:font-bold prose-hr:my-8 prose-hr:border-white/10 leading-relaxed",
-          m.type === 'user' ? 'text-[var(--user-text)]' : 'text-slate-300'
+          "prose prose-slate dark:prose-invert prose-sm max-w-none prose-pre:bg-black/5 dark:prose-pre:bg-black/40 prose-pre:border prose-pre:border-[var(--card-border)] prose-code:text-blue-500 prose-code:font-bold prose-hr:my-8 prose-hr:border-[var(--card-border)] leading-relaxed",
+          m.type === 'user' ? 'text-[var(--user-text)]' : 'text-[var(--text-main)]'
         )}>
           <ReactMarkdown
             children={(m.content as string) || ""}
             components={{
               hr() {
-                return <hr className="my-12 border-white/10" />
+                return <hr className="my-12 border-[var(--card-border)]" />
               },
               code({children, className}) {
                 const match = /language-(\w+)/.exec(className || '')
@@ -77,9 +79,10 @@ const MemoizedMessage = memo(({ m, sessionModelId }: {
                   <MemoizedCodeBlock 
                     language={match[1]} 
                     value={String(children).replace(/\n$/, '')} 
+                    theme={theme}
                   />
                 ) : (
-                  <code className={cn("bg-slate-800/80 px-1.5 py-0.5 rounded text-blue-300 font-mono font-bold border border-white/10 mx-0.5 shadow-sm text-[0.85em]", className)}>
+                  <code className={cn("bg-[var(--sidebar-hover)] px-1.5 py-0.5 rounded text-blue-500 font-mono font-bold border border-[var(--card-border)] mx-0.5 shadow-sm text-[0.85em]", className)}>
                     {String(children)}
                   </code>
                 )
@@ -100,6 +103,7 @@ const MemoizedMessage = memo(({ m, sessionModelId }: {
 });
 
 export function SessionView() {
+  const { theme } = useTheme();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [session, setSession] = useState<AnalyzedSession | null>(null);
@@ -149,43 +153,43 @@ export function SessionView() {
   const renderedMessages = useMemo(() => {
     if (!session) return null;
     return session.messages.map((m) => (
-      <MemoizedMessage key={m.id} m={m} sessionModelId={session.modelId} />
+      <MemoizedMessage key={m.id} m={m} sessionModelId={session.modelId} theme={theme} />
     ));
-  }, [session]);
+  }, [session, theme]);
 
   if (loading) return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[var(--app-bg)] text-slate-600">
+    <div className="flex-1 flex flex-col items-center justify-center bg-[var(--app-bg)] text-[var(--text-muted)]">
       <Loader2 size={32} className="animate-spin text-blue-500/50" />
     </div>
   );
 
   if (!session) return (
-    <div className="flex-1 flex flex-col items-center justify-center bg-[var(--app-bg)] text-slate-700 space-y-4">
+    <div className="flex-1 flex flex-col items-center justify-center bg-[var(--app-bg)] text-[var(--text-muted)] space-y-4">
       <MessageSquare size={48} strokeWidth={1} />
       <p className="text-sm font-medium">Select a session from the sidebar</p>
     </div>
   );
 
   return (
-    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--app-bg)] w-full">
+    <div className="flex-1 flex flex-col h-full min-h-0 overflow-hidden bg-[var(--app-bg)] w-full text-[var(--text-main)] transition-colors duration-200">
       {/* Header */}
-      <div className="p-4 h-16 border-b border-[var(--card-border)] bg-[var(--app-bg)] flex justify-between items-center z-10">
+      <div className="p-4 h-16 border-b border-[var(--card-border)] bg-[var(--app-bg)] flex justify-between items-center z-10 transition-colors duration-200">
         <div className="flex items-center gap-4">
           <Badge variant="primary" className="px-2 py-0.5 tracking-tighter">
             {session.projectName.split('/').pop()?.substring(0, 15)}
           </Badge>
-          <div className="text-[11px] text-slate-500 font-mono tracking-tighter hidden md:block">
-            <span className="text-slate-700 mr-2">SESSION_ID:</span> {session.sessionId.substring(0, 32)}
+          <div className="text-[11px] text-[var(--text-muted)] font-mono tracking-tighter hidden md:block">
+            <span className="text-[var(--text-dim)] mr-2">SESSION_ID:</span> {session.sessionId.substring(0, 32)}
           </div>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full border border-white/5">
-             <Sparkles size={12} className="text-blue-400" />
-             <span className="text-[10px] font-bold text-slate-300 tracking-tight">{session.modelId}</span>
+          <div className="flex items-center gap-2 bg-black/5 dark:bg-slate-900/50 px-3 py-1.5 rounded-full border border-[var(--card-border)]">
+             <Sparkles size={12} className="text-blue-500" />
+             <span className="text-[10px] font-bold text-[var(--text-main)] tracking-tight">{session.modelId}</span>
           </div>
           <button 
             onClick={() => setIsInspectorCollapsed(!isInspectorCollapsed)}
-            className="p-1.5 rounded-md hover:bg-white/5 text-slate-600 hover:text-white transition-all border border-transparent hover:border-white/10"
+            className="p-1.5 rounded-md hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all border border-transparent hover:border-[var(--card-border)]"
             title={isInspectorCollapsed ? "Open Inspector" : "Collapse Inspector"}
           >
             {isInspectorCollapsed ? <PanelRightOpen size={18} /> : <PanelRightClose size={18} />}
@@ -220,29 +224,29 @@ function ToolTimeline({ tools }: { tools: ToolCall[] }) {
 
   return (
     <div className="mt-6 border-t border-[var(--card-border)] pt-4">
-      <div className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-3 flex items-center gap-2">
+      <div className="text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest mb-3 flex items-center gap-2">
         <Wrench size={10} className="text-blue-500/70" /> Execution Chain
       </div>
       <div className="space-y-1.5">
         {tools.map((t, idx) => (
-          <div key={idx} className="bg-black/20 rounded-lg border border-white/5 overflow-hidden">
+          <div key={idx} className="bg-black/5 dark:bg-black/20 rounded-lg border border-[var(--card-border)] overflow-hidden">
             <button 
               onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
-              className="w-full flex items-center justify-between p-2 hover:bg-white/5 transition-colors"
+              className="w-full flex items-center justify-between p-2 hover:bg-[var(--sidebar-hover)] transition-colors"
             >
               <div className="flex items-center gap-3">
                 {t.status === 'success' ? <CheckCircle2 size={12} className="text-emerald-500/80" /> : <XCircle size={12} className="text-rose-500/80" />}
-                <span className="text-[11px] font-mono text-blue-400/90">{t.name}</span>
+                <span className="text-[11px] font-mono text-blue-500/90">{t.name}</span>
               </div>
-              <ChevronDown size={12} className={cn("text-slate-700 transition-transform", expandedId === t.id && "rotate-180")} />
+              <ChevronDown size={12} className={cn("text-[var(--text-dim)] transition-transform", expandedId === t.id && "rotate-180")} />
             </button>
             {expandedId === t.id && (
-              <div className="p-3 bg-black/40 border-t border-white/5 space-y-3">
-                <pre className="text-[10px] text-slate-400 bg-black/30 p-2 rounded-md overflow-x-auto border border-white/5">
+              <div className="p-3 bg-black/5 dark:bg-black/40 border-t border-[var(--card-border)] space-y-3">
+                <pre className="text-[10px] text-[var(--text-muted)] bg-black/5 dark:bg-black/30 p-2 rounded-md overflow-x-auto border border-[var(--card-border)]">
                   {JSON.stringify(t.args, null, 2)}
                 </pre>
                 {!!t.result && (
-                  <pre className="text-[10px] text-emerald-400/70 bg-black/30 p-2 rounded-md overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto border border-emerald-900/10">
+                  <pre className="text-[10px] text-emerald-600 dark:text-emerald-400/70 bg-black/5 dark:bg-black/30 p-2 rounded-md overflow-x-auto whitespace-pre-wrap max-h-48 overflow-y-auto border border-emerald-900/10">
                     {typeof t.result === 'string' ? t.result : JSON.stringify(t.result as Record<string, unknown>, null, 2)}
                   </pre>
                 )}
@@ -263,17 +267,17 @@ function ThoughtViewer({ thoughts }: { thoughts?: MessageThought[] }) {
     <div className="mb-5">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 text-[9px] font-bold text-amber-500/60 uppercase tracking-widest hover:text-amber-500/90 transition-colors"
+        className="flex items-center gap-2 text-[9px] font-bold text-amber-600 dark:text-amber-500/60 uppercase tracking-widest hover:text-amber-500 transition-colors"
       >
         <Lightbulb size={11} /> 
         <span>{isOpen ? 'Close Thoughts' : 'Show Thoughts'}</span>
         <ChevronDown size={10} className={cn(isOpen && "rotate-180")} />
       </button>
       {isOpen && (
-        <div className="mt-3 space-y-2 bg-amber-900/5 border-l border-amber-500/30 pl-4 py-1.5">
+        <div className="mt-3 space-y-2 bg-amber-500/5 border-l border-amber-500/30 pl-4 py-1.5">
           {thoughts.map((thought, i) => (
-            <div key={i} className="text-[11px] leading-relaxed text-slate-400/90">
-              <span className="text-amber-600/60 font-medium mr-2">#{thought.subject}</span>
+            <div key={i} className="text-[11px] leading-relaxed text-[var(--text-muted)]">
+              <span className="text-amber-600 font-medium mr-2">#{thought.subject}</span>
               {thought.description as string}
             </div>
           ))}

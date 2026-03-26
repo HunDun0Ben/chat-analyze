@@ -13,10 +13,10 @@ interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
 
 export const Badge = ({ children, className, variant = 'primary', ...props }: BadgeProps) => {
   const variants = {
-    primary: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    secondary: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-    outline: "bg-transparent border-white/10 text-slate-400",
-    ghost: "bg-white/5 border-transparent text-slate-500"
+    primary: "bg-blue-500/10 text-blue-500 dark:text-blue-400 border-blue-500/20",
+    secondary: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+    outline: "bg-transparent border-[var(--card-border)] text-[var(--text-muted)]",
+    ghost: "bg-black/5 dark:bg-white/5 border-transparent text-[var(--text-dim)]"
   };
 
   return (

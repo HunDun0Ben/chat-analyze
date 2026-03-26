@@ -6,16 +6,18 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Search, Folder, Zap, ChevronRight, LayoutDashboard, Database, Sparkles, MessageCircle } from 'lucide-react';
+import { Search, Folder, Zap, ChevronRight, LayoutDashboard, Database, Sparkles, MessageCircle, Sun, Moon } from 'lucide-react';
 import { fetchProjects, fetchSessions, fetchSessionsSummary } from '../../api';
 import type { AnalyzedSession, SidebarSession } from '../../types';
 import { cn } from '../../utils';
 import { Badge } from '../ui/Badge';
 import { Tabs } from '../ui/Tabs';
+import { useTheme } from '../../features/theme/useTheme';
 
 type ProviderType = 'gemini' | 'chatgpt';
 
 export function Sidebar() {
+  const { theme, toggleTheme } = useTheme();
   const [activeProvider, setActiveProvider] = useState<ProviderType>('gemini');
   const [projects, setProjects] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
@@ -88,21 +90,30 @@ export function Sidebar() {
   return (
     <aside className="w-72 border-r border-[var(--card-border)] bg-[var(--sidebar-bg)] flex flex-col h-full shrink-0 z-20">
       <div className="p-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
-            <Zap size={18} className="text-white" fill="white" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+              <Zap size={18} className="text-white" fill="white" />
+            </div>
+            <div className="font-bold text-[var(--text-main)] tracking-tight">Gemini Audit</div>
           </div>
-          <div className="font-bold text-white tracking-tight">Gemini Audit</div>
+          <button 
+            onClick={toggleTheme}
+            className="p-2 rounded-lg hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] transition-colors"
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
+          </button>
         </div>
 
         <div className="relative group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={14} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-dim)] group-focus-within:text-blue-500 transition-colors" size={14} />
           <input 
             type="text" 
             placeholder={`Search ID, title, or projects...`} 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-slate-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-black transition-all"
+            className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl py-2 pl-10 pr-4 text-xs text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-[var(--input-focus)] transition-all placeholder:text-[var(--text-dim)]"
           />
         </div>
       </div>
@@ -180,12 +191,12 @@ export function Sidebar() {
         )}
       </nav>
 
-      <div className="p-6 mt-auto border-t border-[var(--card-border)] bg-black/20">
-        <div className="bg-gradient-to-br from-blue-600/10 to-emerald-600/10 border border-white/5 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-tighter">
+      <div className="p-6 mt-auto border-t border-[var(--card-border)] bg-[var(--sidebar-hover)]">
+        <div className="bg-gradient-to-br from-blue-600/5 to-emerald-600/5 dark:from-blue-600/10 dark:to-emerald-600/10 border border-[var(--card-border)] rounded-2xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--text-main)] uppercase tracking-tighter">
             <Database size={12} className="text-blue-400" /> {allSessions.length} Sessions Indexed
           </div>
-          <div className="text-[10px] text-slate-500 leading-snug">
+          <div className="text-[10px] text-[var(--text-muted)] leading-snug">
             {search ? 'Filtering hierarchical view.' : 'Browse indexed AI sessions.'}
           </div>
         </div>
@@ -196,8 +207,8 @@ export function Sidebar() {
 
 function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession | SidebarSession, variant?: 'blue' | 'emerald' }) {
   const colors = {
-    blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
-    emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+    blue: "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400",
+    emerald: "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
   };
 
   // 兼容逻辑：优先使用 sessionTitle (文件名) -> firstMessage (针对概要数据) -> messages[0] -> sessionId
@@ -212,7 +223,7 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession |
       data-testid={`session-link-${session.sessionId}`}
       className={({ isActive }) => cn(
         "flex flex-col gap-1.5 p-3 rounded-xl transition-all group border border-transparent",
-        isActive ? colors[variant] : "hover:bg-white/5 text-slate-500 hover:text-slate-300"
+        isActive ? colors[variant] : "hover:bg-[var(--sidebar-hover)] hover:border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--text-main)]"
       )}
     >
       {({ isActive }) => (
@@ -220,7 +231,9 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession |
           <div className="flex-1 min-w-0">
              <div className={cn(
                "text-[11px] font-bold truncate leading-tight mb-0.5 flex items-center gap-1.5",
-               isActive ? (variant === 'blue' ? "text-blue-300" : "text-emerald-300") : "text-slate-300 group-hover:text-white"
+               isActive 
+                 ? (variant === 'blue' ? "text-blue-700 dark:text-blue-300" : "text-emerald-700 dark:text-emerald-300") 
+                 : "text-[var(--text-muted)] group-hover:text-[var(--text-main)]"
              )}>
                <span className="truncate">{displayTitle}</span>
              </div>
@@ -230,20 +243,20 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession |
                  <span className={cn(
                    "font-mono text-[10px] font-bold tracking-tight shrink-0",
                    isActive 
-                     ? (variant === 'blue' ? "text-blue-200" : "text-emerald-200") 
+                     ? (variant === 'blue' ? "text-blue-600 dark:text-blue-200" : "text-emerald-600 dark:text-emerald-200") 
                      : (variant === 'blue' ? "text-blue-500/80" : "text-emerald-500/80")
                  )}>
                    {session.sessionId.substring(0, 8)}
                  </span>
                  
                  {session.isCheckpoint && (
-                   <span className="shrink-0 bg-blue-500/20 text-blue-400 text-[8px] px-1 rounded border border-blue-500/30 uppercase tracking-tighter">
+                   <span className="shrink-0 bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[8px] px-1 rounded border border-blue-500/30 uppercase tracking-tighter">
                      CP
                    </span>
                  )}
                </div>
 
-               <span className="text-[9px] font-medium opacity-40 whitespace-nowrap overflow-hidden text-right">
+               <span className="text-[9px] font-medium opacity-60 dark:opacity-40 whitespace-nowrap overflow-hidden text-right text-[var(--text-dim)]">
                  {new Date(session.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
                </span>
              </div>

@@ -55,7 +55,7 @@ export function SessionInspector({
             {/* Quality Score */}
             <div className="space-y-4">
                <div className="flex justify-between items-end">
-                 <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">Expression Score</div>
+                 <div className="text-[10px] font-bold text-[var(--text-dim)] uppercase tracking-tighter">Expression Score</div>
                  <div className={cn("text-2xl font-black font-mono leading-none", getScoreColor(session.expressionQuality.score))}>
                    {session.expressionQuality.score}
                  </div>
@@ -71,26 +71,26 @@ export function SessionInspector({
 
             {/* Category & Status */}
             <div className="grid grid-cols-2 gap-3">
-              <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                <div className="text-[9px] text-slate-500 font-bold mb-1 uppercase">Category</div>
-                <div className="text-xs font-bold text-blue-400 flex items-center gap-1">
+              <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-[var(--card-border)]">
+                <div className="text-[9px] text-[var(--text-dim)] font-bold mb-1 uppercase">Category</div>
+                <div className="text-xs font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1">
                   <Zap size={10} /> {session.category}
                 </div>
               </div>
-              <div className="bg-white/5 rounded-xl p-3 border border-white/5">
-                <div className="text-[9px] text-slate-500 font-bold mb-1 uppercase">Total Turns</div>
-                <div className="text-xs font-bold text-white flex items-center gap-1">
-                  <MessageSquare size={10} className="text-slate-400" /> {session.stats.turns}
+              <div className="bg-black/5 dark:bg-white/5 rounded-xl p-3 border border-[var(--card-border)]">
+                <div className="text-[9px] text-[var(--text-dim)] font-bold mb-1 uppercase">Total Turns</div>
+                <div className="text-xs font-bold text-[var(--text-main)] flex items-center gap-1">
+                  <MessageSquare size={10} className="text-[var(--text-dim)]" /> {session.stats.turns}
                 </div>
               </div>
             </div>
 
             {/* Coach Suggestion */}
             <div className="bg-blue-600/5 rounded-xl p-4 border border-blue-500/20 space-y-3">
-              <div className="text-[10px] font-bold text-blue-400 uppercase flex items-center gap-2">
+              <div className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase flex items-center gap-2">
                 <ShieldCheck size={14} /> Coach Suggestion
               </div>
-              <p className="text-xs text-slate-300 leading-relaxed italic">
+              <p className="text-xs text-[var(--text-main)] leading-relaxed italic">
                 "{session.expressionQuality.suggestion}"
               </p>
               {session.expressionQuality.ambiguities.length > 0 && (
@@ -106,32 +106,32 @@ export function SessionInspector({
 
             {/* Resource Usage */}
             <div className="space-y-4">
-               <div className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter flex items-center gap-2">
+               <div className="text-[10px] font-bold text-[var(--text-dim)] uppercase tracking-tighter flex items-center gap-2">
                  <BarChart3 size={12} /> Resource Usage
                </div>
-               <div className="space-y-2">
+               <div className="space-y-2 text-[var(--text-muted)]">
                  <TokenBar label="Total Tokens" value={session.stats.tokenUsage.total} max={100000} color="bg-blue-500/40" />
-                 <TokenBar label="Input (Prompt)" value={session.stats.tokenUsage.input} max={100000} color="bg-slate-700" />
+                 <TokenBar label="Input (Prompt)" value={session.stats.tokenUsage.input} max={100000} color="bg-[var(--text-dim)]" />
                  <TokenBar label="Output (Gemini)" value={session.stats.tokenUsage.output} max={20000} color="bg-emerald-500/40" />
                </div>
             </div>
           </div>
         ) : (
           <div className="p-4 space-y-3 animate-in fade-in slide-in-from-left-4 duration-300">
-            <div className="text-[10px] font-bold text-slate-600 uppercase tracking-widest px-2 mb-4">Chat Timeline</div>
+            <div className="text-[10px] font-bold text-[var(--text-dim)] uppercase tracking-widest px-2 mb-4">Chat Timeline</div>
             <div className="space-y-1">
               {session.messages.filter(m => m.type !== 'info').map((m) => (
                 <button 
                   key={m.id} 
                   onClick={() => onSelectMessage?.(m.id)}
-                  className="w-full text-left group relative pl-6 pb-4 border-l border-slate-800 last:pb-0 block"
+                  className="w-full text-left group relative pl-6 pb-4 border-l border-[var(--card-border)] last:pb-0 block"
                 >
                   <div className={cn(
-                    "absolute left-[-4.5px] top-1.5 w-2 h-2 rounded-full ring-4 ring-slate-900 transition-colors",
-                    m.type === 'user' ? "bg-slate-600 group-hover:bg-slate-400" : "bg-blue-500 group-hover:bg-blue-400"
+                    "absolute left-[-4.5px] top-1.5 w-2 h-2 rounded-full ring-4 ring-[var(--sidebar-bg)] transition-colors",
+                    m.type === 'user' ? "bg-[var(--text-dim)] group-hover:bg-[var(--text-muted)]" : "bg-blue-500 group-hover:bg-blue-400"
                   )} />
-                  <div className="text-[9px] font-mono text-slate-600 mb-1 flex justify-between">
-                    <span className={m.type === 'user' ? "text-slate-500" : "text-blue-400/80"}>
+                  <div className="text-[9px] font-mono text-[var(--text-dim)] mb-1 flex justify-between">
+                    <span className={m.type === 'user' ? "text-[var(--text-dim)]" : "text-blue-500 dark:text-blue-400/80"}>
                       {m.type === 'user' ? 'USER' : session.modelId}
                     </span>
                     <span>{new Date(m.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
@@ -139,8 +139,8 @@ export function SessionInspector({
                   <div className={cn(
                     "text-[11px] leading-snug truncate-2-lines p-2 rounded-md border transition-all",
                     m.type === 'user' 
-                      ? "bg-slate-900/40 border-slate-800/50 text-slate-400 group-hover:bg-slate-800/60 group-hover:border-slate-700" 
-                      : "bg-blue-500/5 border-blue-500/10 text-slate-300 group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-white"
+                      ? "bg-black/5 dark:bg-slate-900/40 border-[var(--card-border)] text-[var(--text-muted)] group-hover:bg-black/10 dark:group-hover:bg-slate-800/60" 
+                      : "bg-blue-500/5 border-blue-500/10 text-[var(--text-muted)] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-[var(--text-main)]"
                   )}>
                     {m.content?.substring(0, 60)}{m.content?.length > 60 ? '...' : ''}
                   </div>

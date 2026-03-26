@@ -96,4 +96,30 @@ test.describe('Chat Analyze Frontend', () => {
     const header = page.locator('header, .border-b'); // 宽泛定位
     await expect(header.first()).toBeVisible();
   });
+
+  test('should toggle dark/light mode', async ({ page }) => {
+    const html = page.locator('html');
+    const toggleButton = page.locator('button[title^="Switch to"]');
+
+    // 默认应该是 dark 或 light (取决于系统或存储)
+    const isInitiallyDark = await html.evaluate(el => el.classList.contains('dark'));
+    
+    // 点击切换
+    await toggleButton.click();
+    
+    // 验证类名是否反转
+    if (isInitiallyDark) {
+      await expect(html).not.toHaveClass(/dark/);
+    } else {
+      await expect(html).toHaveClass(/dark/);
+    }
+
+    // 再次点击恢复
+    await toggleButton.click();
+    if (isInitiallyDark) {
+      await expect(html).toHaveClass(/dark/);
+    } else {
+      await expect(html).not.toHaveClass(/dark/);
+    }
+  });
 });

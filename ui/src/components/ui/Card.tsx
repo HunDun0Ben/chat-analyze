@@ -15,8 +15,8 @@ export const Card = ({ children, className, glass, ...props }: CardProps) => {
   return (
     <div 
       className={cn(
-        "bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[2rem] shadow-2xl relative overflow-hidden",
-        glass && "bg-white/[0.02] border-white/5 backdrop-blur-sm",
+        "bg-[var(--card-bg)] border border-[var(--card-border)] rounded-[var(--radius-card)] shadow-2xl relative overflow-hidden transition-colors duration-200",
+        glass && "bg-black/[0.02] dark:bg-white/[0.02] border-[var(--card-border)] backdrop-blur-sm",
         className
       )}
       {...props}

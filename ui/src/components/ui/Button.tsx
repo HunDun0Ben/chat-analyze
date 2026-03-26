@@ -22,8 +22,8 @@ export const Button = ({
 }: ButtonProps) => {
   const variants = {
     primary: "bg-blue-600 hover:bg-blue-500 text-white border-blue-500 shadow-lg shadow-blue-500/20",
-    secondary: "bg-white/5 hover:bg-white/10 text-slate-300 border-white/5",
-    ghost: "bg-transparent hover:bg-white/5 text-slate-500 border-transparent",
+    secondary: "bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-[var(--text-muted)] border-[var(--card-border)]",
+    ghost: "bg-transparent hover:bg-black/5 dark:hover:bg-white/5 text-[var(--text-dim)] border-transparent",
     danger: "bg-rose-600 hover:bg-rose-500 text-white border-rose-500",
     success: "bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500"
   };
