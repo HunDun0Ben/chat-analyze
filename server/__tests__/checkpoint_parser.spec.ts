@@ -4,7 +4,7 @@
  * Gemini Chat Analyze - Gemini Checkpoint Parser Tests
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { GeminiCheckpointParser } from '../core/parsers/GeminiCheckpointParser.js';
 import { CoachService } from '../core/services/CoachService.js';
 
@@ -83,7 +83,7 @@ describe('GeminiCheckpointParser', () => {
   it('should extract project name from filename correctly', async () => {
     const cases = [
       { fileName: 'checkpoint-%22redis%20base%20dir%22', expected: 'redis' },
-      { fileName: 'checkpoint-my_project', expected: 'my' }, // "my" is short, but the parser merges? wait, currently "my" is 2 chars, will return "my-project"
+      { fileName: 'checkpoint-my_project', expected: 'my-project' }, // Parser merges short first part
       { fileName: 'checkpoint-%22A-B%22', expected: 'A-B' },
       { fileName: 'checkpoint-%E7%BE%8E%E5%9B%A2', expected: '美团' }
     ];

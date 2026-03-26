@@ -12,6 +12,26 @@ import {
 } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
 
+interface GeminiPart {
+  text?: string;
+  thought?: boolean;
+  functionCall?: {
+    id?: string;
+    name: string;
+    args?: Record<string, unknown>;
+  };
+  functionResponse?: {
+    id: string;
+    name: string;
+    response: unknown;
+  };
+}
+
+interface GeminiHistoryItem {
+  role: 'user' | 'model';
+  parts: GeminiPart[];
+}
+
 /**
  * GeminiCheckpointParser
  * Handles the native Gemini API history format (with 'history' and 'parts').
@@ -19,13 +39,13 @@ import { BaseParser, ParserOptions } from './BaseParser.js';
 export class GeminiCheckpointParser extends BaseParser {
   async analyze(session: unknown, options: ParserOptions): Promise<AnalyzedSession> {
     const { filePath, fileName } = options;
-    const s = session as { history: any[] };
+    const s = session as { history: GeminiHistoryItem[] };
 
     if (!s || !Array.isArray(s.history)) {
       throw new Error('Not a valid Gemini checkpoint: Missing "history" array');
     }
 
-    const messages: SessionMessage[] = s.history.map((h: any, index: number) => {
+    const messages: SessionMessage[] = s.history.map((h, index: number) => {
       const type = h.role === 'model' ? 'gemini' : 'user';
       const timestamp = new Date().toISOString(); // Fallback timestamp
 
@@ -40,7 +60,7 @@ export class GeminiCheckpointParser extends BaseParser {
         const texts: string[] = [];
         const toolCalls: ToolCall[] = [];
 
-        for (const part of h.parts) {
+        for (const part of h.parts as GeminiPart[]) {
           if (part.text) {
             if (part.thought === true) {
               if (!msg.thoughts) msg.thoughts = [];
@@ -161,7 +181,7 @@ export class GeminiCheckpointParser extends BaseParser {
     // 4. 提取第一个有意义的词作为项目名
     // 例如 "redis base dir" -> "redis"
     // 如果是单个词则保留
-    const parts = name.split(/[\s_\-]/).filter(p => p.length > 0);
+    const parts = name.split(/[\s_-]/).filter(p => p.length > 0);
     
     if (parts.length > 0) {
       const firstPart = parts[0];

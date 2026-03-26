@@ -37,10 +37,10 @@ export function Sidebar() {
   }, [selectedProject, search]);
 
   // --- 核心搜索/过滤逻辑 ---
-  const terms = search.toLowerCase().split(/\s+/).filter(t => t.length > 0);
   
   // 计算每个项目在搜索模式下的状态
   const projectSearchData = useMemo(() => {
+    const terms = search.toLowerCase().split(/\s+/).filter(t => t.length > 0);
     if (terms.length === 0) return null;
 
     const results: Record<string, { 
@@ -74,7 +74,7 @@ export function Sidebar() {
       }
     });
     return results;
-  }, [search, projects, allSessions, activeProvider, terms]);
+  }, [search, projects, allSessions, activeProvider]);
 
   const visibleProjectList = search 
     ? Object.keys(projectSearchData || {}) 
@@ -203,7 +203,7 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession |
   // 兼容逻辑：优先使用 sessionTitle (文件名) -> firstMessage (针对概要数据) -> messages[0] -> sessionId
   const displayTitle = session.sessionTitle || 
                        ('firstMessage' in session ? session.firstMessage : 
-                        ('messages' in session ? (session as any).messages.find((m: any) => m.type === 'user')?.content : '')) || 
+                        ('messages' in session ? (session as AnalyzedSession).messages.find(m => m.type === 'user')?.content : '')) || 
                        session.sessionId;
 
   return (
