@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - API Server
- */
+
+
 
 import express from 'express';
 import cors from 'cors';

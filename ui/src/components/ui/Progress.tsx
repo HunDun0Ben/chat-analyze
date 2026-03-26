@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Progress Atomic Component
- */
+
+
 
 import { cn } from '../../utils';
 

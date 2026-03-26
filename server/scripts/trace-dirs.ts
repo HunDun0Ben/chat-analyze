@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Directory Trace Script
- */
+
+
 
 import fs from 'node:fs/promises';
 import path from 'node:path';

@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Core Data Types
- */
+
+
 
 export type TaskCategory = 'Coding' | 'Learning' | 'Ops' | 'Arch' | 'Investigate' | 'Research' | 'General';
 

@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Gemini Checkpoint Parser Tests
- */
+
+
 
 import { describe, it, expect } from 'vitest';
 import { GeminiCheckpointParser } from '../core/parsers/GeminiCheckpointParser.js';

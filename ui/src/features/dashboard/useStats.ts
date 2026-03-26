@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Dashboard Stats Hook
- */
+
+
 
 import { useState, useEffect } from 'react';
 import { fetchStatsTimeline, fetchModelStats } from '../../api';

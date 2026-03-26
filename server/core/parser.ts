@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Session Parser (Delegator)
- */
+
+
 
 import fs from 'node:fs/promises';
 import path from 'node:path';

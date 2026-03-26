@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - DiscoveryService Unit Tests
- */
+
+
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DiscoveryService } from '../core/services/DiscoveryService.js';

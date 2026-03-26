@@ -87,9 +87,3 @@ npm run dev
   - `db/`: SQLite 数据库封装。
 - `ui/`: 基于 React 的可视化仪表盘。
 - `docs/`: 详细的架构文档与设计指南。
-
----
-
-## 📄 License
-
-Copyright 2026 Google LLC. Licensed under the Apache License 2.0.

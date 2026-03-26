@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Base Parser Interface
- */
+
+
 
 import { AnalyzedSession } from '../../types/index.js';
 import { CoachService } from '../services/CoachService.js';

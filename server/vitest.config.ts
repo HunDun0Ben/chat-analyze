@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Vitest Configuration
- */
+
+
 
 import { defineConfig } from 'vitest/config';
 

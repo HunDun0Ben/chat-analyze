@@ -85,9 +85,3 @@ npm run dev
   - `api/`: RESTful API Service
   - `db/`: SQLite Storage
 - `ui/`: React Dashboard
-
----
-
-## 📄 License
-
-Copyright 2026 Google LLC. Licensed under the Apache License 2.0.

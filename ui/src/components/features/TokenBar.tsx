@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - TokenBar Component
- */
+
+
 
 import { Progress } from '../ui/Progress';
 

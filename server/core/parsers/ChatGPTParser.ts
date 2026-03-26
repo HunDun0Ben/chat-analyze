@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - ChatGPT Session Parser
- */
+
+
 
 import { 
   AnalyzedSession, 

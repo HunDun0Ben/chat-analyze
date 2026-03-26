@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Badge Atomic Component
- */
+
+
 
 import React from 'react';
 import { cn } from '../../utils';

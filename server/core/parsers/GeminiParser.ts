@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Gemini Session Parser
- */
+
+
 
 import path from 'node:path';
 import { 

@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - InsightCard Component
- */
+
+
 
 import React from 'react';
 

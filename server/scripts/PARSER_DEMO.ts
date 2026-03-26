@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2025 Google LLC
- * Gemini Chat Analyze - Parser Prototype
- */
+
+
 
 import fs from 'node:fs/promises';
 

@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - ChatGPT Parser Unit Tests
- */
+
+
 
 import { describe, it, expect } from 'vitest';
 import { SessionParser } from '../core/parser.js';

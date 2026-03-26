@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Path Verification Script
- */
+
+
 
 import { DiscoveryService } from '../core/services/DiscoveryService.js';
 import path from 'node:path';

@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Optimized Session Manager (Filesystem-First)
- */
+
+
 
 import { SessionParser } from './parser.js';
 import { SessionStorage } from '../db/storage.js';

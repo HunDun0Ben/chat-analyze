@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Gemini API Checkpoint Parser
- */
+
+
 
 import crypto from 'node:crypto';
 import { 

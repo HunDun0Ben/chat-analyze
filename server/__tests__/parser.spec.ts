@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Parser Unit Tests
- */
+
+
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionParser } from '../core/parser.js';

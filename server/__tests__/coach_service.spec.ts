@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - CoachService Unit Tests
- */
+
+
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CoachService } from '../core/services/CoachService.js';

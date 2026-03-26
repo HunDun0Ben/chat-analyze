@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Checkpoint Verification Script
- */
+
+
 
 import { SessionParser } from '../core/parser.js';
 import path from 'node:path';

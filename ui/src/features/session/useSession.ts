@@ -1,8 +1,4 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Session Logic Hook
- */
+
 
 import { useState } from 'react';
 import { exportSkill as apiExportSkill } from '../../api';

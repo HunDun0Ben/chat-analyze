@@ -1,8 +1,5 @@
-/**
- * @license
- * Copyright 2026 Google LLC
- * Gemini Chat Analyze - Entry Point
- */
+
+
 
 import path from 'node:path';
 import os from 'node:os';
