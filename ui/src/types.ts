@@ -49,7 +49,7 @@ export interface AnalyzedSession {
   modelId: string;
   category: string;
   provider: 'gemini' | 'chatgpt';
-  
+
   startTime: string;
   lastUpdated: string;
   expressionQuality: {

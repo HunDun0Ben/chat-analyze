@@ -1,6 +1,3 @@
-
-
-
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { AnalyzedSession } from '../types/index.js';
@@ -27,7 +24,9 @@ export class SessionParser {
    * Main entry point for session analysis.
    * Detects the format and delegates to the appropriate parser.
    */
-  async analyze(filePath: string): Promise<AnalyzedSession | AnalyzedSession[]> {
+  async analyze(
+    filePath: string,
+  ): Promise<AnalyzedSession | AnalyzedSession[]> {
     const rawData = await fs.readFile(filePath, 'utf-8');
     let sessionData: unknown;
     try {
@@ -72,7 +71,7 @@ export class SessionParser {
     if (s && s.mapping && (s.conversation_id || s.id)) {
       return this.chatGPTParser;
     }
-    
+
     // Detect Gemini API History (Checkpoint) format
     if (s && s.history && Array.isArray(s.history)) {
       return this.geminiCheckpointParser;

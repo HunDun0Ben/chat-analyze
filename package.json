@@ -16,6 +16,8 @@
     "test": "npm run test -w @chat-analyze/server",
     "test:ui": "npm run test -w ui",
     "lint": "npm run lint --workspaces",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "typecheck": "concurrently \"npm run typecheck:ui\" \"npm run typecheck:server\"",
     "typecheck:ui": "cd ui && npx tsc -b",
     "typecheck:server": "cd server && npx tsc --noEmit",
@@ -23,6 +25,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.8.1",
     "typescript": "^5.3.3"
   }
 }

@@ -1,6 +1,3 @@
-
-
-
 import { useState, useEffect } from 'react';
 import { fetchStatsTimeline, fetchModelStats } from '../../api';
 import type { StatsTimeline, ModelStat } from '../../types';
@@ -18,7 +15,7 @@ export function useStats() {
         setModels(Array.isArray(modelStats) ? modelStats : []);
         setLoading(false);
       })
-      .catch(err => {
+      .catch((err) => {
         console.error('Failed to fetch stats:', err);
         setError(err instanceof Error ? err : new Error(String(err)));
         setData([]);

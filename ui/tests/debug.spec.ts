@@ -2,10 +2,10 @@ import { test } from '@playwright/test';
 
 test('capture navigation crash', async ({ page }) => {
   const errors: string[] = [];
-  page.on('pageerror', error => {
+  page.on('pageerror', (error) => {
     errors.push(error.message);
   });
-  page.on('console', msg => {
+  page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
@@ -29,7 +29,7 @@ test('capture navigation crash', async ({ page }) => {
   console.log('URL after click:', page.url());
   if (errors.length > 0) {
     console.log('DETECTED ERRORS:');
-    errors.forEach((err, i) => console.log(`${i+1}: ${err}`));
+    errors.forEach((err, i) => console.log(`${i + 1}: ${err}`));
   } else {
     console.log('No direct console errors detected, but check visibility.');
   }
@@ -37,6 +37,6 @@ test('capture navigation crash', async ({ page }) => {
   // 检查主体内容是否为空
   const bodyContent = await page.innerHTML('body');
   console.log('Body empty?', bodyContent.includes('id="root"'));
-  
+
   await page.screenshot({ path: 'crash_debug.png' });
 });

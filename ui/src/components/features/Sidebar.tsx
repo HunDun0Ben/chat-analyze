@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { NavLink } from "react-router-dom";
+import { useState, useEffect, useMemo } from 'react';
+import { NavLink } from 'react-router-dom';
 import {
   Search,
   Folder,
@@ -11,24 +11,24 @@ import {
   MessageCircle,
   Sun,
   Moon,
-} from "lucide-react";
-import { fetchProjects, fetchSessions, fetchSessionsSummary } from "../../api";
-import type { AnalyzedSession, SidebarSession } from "../../types";
-import { cn } from "../../utils";
-import { Badge } from "../ui/Badge";
-import { Tabs } from "../ui/Tabs";
-import { useTheme } from "../../features/theme/useTheme";
+} from 'lucide-react';
+import { fetchProjects, fetchSessions, fetchSessionsSummary } from '../../api';
+import type { AnalyzedSession, SidebarSession } from '../../types';
+import { cn } from '../../utils';
+import { Badge } from '../ui/Badge';
+import { Tabs } from '../ui/Tabs';
+import { useTheme } from '../../features/theme/useTheme';
 
-type ProviderType = "gemini" | "chatgpt";
+type ProviderType = 'gemini' | 'chatgpt';
 
 export function Sidebar() {
   const { theme, toggleTheme } = useTheme();
-  const [activeProvider, setActiveProvider] = useState<ProviderType>("gemini");
+  const [activeProvider, setActiveProvider] = useState<ProviderType>('gemini');
   const [projects, setProjects] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AnalyzedSession[]>([]);
   const [allSessions, setAllSessions] = useState<SidebarSession[]>([]);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchProjects(activeProvider).then(setProjects);
@@ -78,7 +78,7 @@ export function Sidebar() {
           s.sessionTitle,
           s.firstMessage,
         ]
-          .join(" ")
+          .join(' ')
           .toLowerCase();
 
         return terms.every((t) => combinedText.includes(t));
@@ -101,16 +101,16 @@ export function Sidebar() {
 
   const tabs = [
     {
-      id: "gemini",
-      label: "Gemini",
+      id: 'gemini',
+      label: 'Gemini',
       icon: <Sparkles size={14} />,
-      activeColor: "text-blue-400 border-blue-500 bg-blue-500/5",
+      activeColor: 'text-blue-400 border-blue-500 bg-blue-500/5',
     },
     {
-      id: "chatgpt",
-      label: "ChatGPT",
+      id: 'chatgpt',
+      label: 'ChatGPT',
       icon: <MessageCircle size={14} />,
-      activeColor: "text-emerald-400 border-emerald-500 bg-emerald-500/5",
+      activeColor: 'text-emerald-400 border-emerald-500 bg-emerald-500/5',
     },
   ];
 
@@ -129,9 +129,9 @@ export function Sidebar() {
           <button
             onClick={toggleTheme}
             className="p-2 rounded-lg hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] transition-colors"
-            title={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
-            {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            {theme === 'light' ? <Moon size={16} /> : <Sun size={16} />}
           </button>
         </div>
 
@@ -166,10 +166,10 @@ export function Sidebar() {
           to="/"
           className={({ isActive }) =>
             cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all mb-4",
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold transition-all mb-4',
               isActive
-                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                : "text-slate-400 hover:bg-white/5",
+                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                : 'text-slate-400 hover:bg-white/5',
             )
           }
         >
@@ -178,9 +178,9 @@ export function Sidebar() {
 
         <div className="pt-2 pb-2 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest flex justify-between items-center">
           <span>
-            {activeProvider === "gemini"
-              ? "Active Projects"
-              : "Imported History"}
+            {activeProvider === 'gemini'
+              ? 'Active Projects'
+              : 'Imported History'}
           </span>
           {search && (
             <Badge variant="primary" className="text-[9px] px-1.5 py-0">
@@ -205,20 +205,20 @@ export function Sidebar() {
                     )
                   }
                   className={cn(
-                    "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group",
+                    'w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group',
                     isExpanded
-                      ? "bg-white/5 text-blue-400"
-                      : "text-slate-500 hover:bg-white/5 hover:text-slate-300",
+                      ? 'bg-white/5 text-blue-400'
+                      : 'text-slate-500 hover:bg-white/5 hover:text-slate-300',
                     search &&
                       projectSearchData?.[project]?.matches &&
-                      "text-blue-300 ring-1 ring-blue-500/20 bg-blue-500/5",
+                      'text-blue-300 ring-1 ring-blue-500/20 bg-blue-500/5',
                   )}
                 >
                   <div className="flex items-center gap-3">
                     <Folder
                       size={16}
                       className={
-                        isExpanded ? "text-blue-500" : "text-slate-600"
+                        isExpanded ? 'text-blue-500' : 'text-slate-600'
                       }
                     />
                     <span className="truncate max-w-[140px] text-left">
@@ -228,8 +228,8 @@ export function Sidebar() {
                   <ChevronRight
                     size={14}
                     className={cn(
-                      "transition-transform text-slate-700",
-                      isExpanded && "rotate-90 text-blue-500",
+                      'transition-transform text-slate-700',
+                      isExpanded && 'rotate-90 text-blue-500',
                     )}
                   />
                 </button>
@@ -243,7 +243,7 @@ export function Sidebar() {
                               key={session.sessionId}
                               session={session}
                               variant={
-                                activeProvider === "gemini" ? "blue" : "emerald"
+                                activeProvider === 'gemini' ? 'blue' : 'emerald'
                               }
                             />
                           ),
@@ -268,13 +268,13 @@ export function Sidebar() {
       <div className="p-6 mt-auto border-t border-[var(--card-border)] bg-[var(--sidebar-hover)]">
         <div className="bg-gradient-to-br from-blue-600/5 to-emerald-600/5 dark:from-blue-600/10 dark:to-emerald-600/10 border border-[var(--card-border)] rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-[10px] font-bold text-[var(--text-main)] uppercase tracking-tighter">
-            <Database size={12} className="text-blue-400" />{" "}
+            <Database size={12} className="text-blue-400" />{' '}
             {allSessions.length} Sessions Indexed
           </div>
           <div className="text-[10px] text-[var(--text-muted)] leading-snug">
             {search
-              ? "Filtering hierarchical view."
-              : "Browse indexed AI sessions."}
+              ? 'Filtering hierarchical view.'
+              : 'Browse indexed AI sessions.'}
           </div>
         </div>
       </div>
@@ -284,26 +284,26 @@ export function Sidebar() {
 
 function SessionLink({
   session,
-  variant = "blue",
+  variant = 'blue',
 }: {
   session: AnalyzedSession | SidebarSession;
-  variant?: "blue" | "emerald";
+  variant?: 'blue' | 'emerald';
 }) {
   const colors = {
-    blue: "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400",
+    blue: 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400',
     emerald:
-      "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400",
+      'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400',
   };
 
   // 兼容逻辑：优先使用 sessionTitle (文件名) -> firstMessage (针对概要数据) -> messages[0] -> sessionId
   const displayTitle =
     session.sessionTitle ||
-    ("firstMessage" in session
+    ('firstMessage' in session
       ? session.firstMessage
-      : "messages" in session
-        ? (session as AnalyzedSession).messages.find((m) => m.type === "user")
+      : 'messages' in session
+        ? (session as AnalyzedSession).messages.find((m) => m.type === 'user')
             ?.content
-        : "") ||
+        : '') ||
     session.sessionId;
 
   return (
@@ -312,10 +312,10 @@ function SessionLink({
       data-testid={`session-link-${session.sessionId}`}
       className={({ isActive }) =>
         cn(
-          "flex flex-col gap-1.5 p-3 rounded-xl transition-all group border border-transparent",
+          'flex flex-col gap-1.5 p-3 rounded-xl transition-all group border border-transparent',
           isActive
             ? colors[variant]
-            : "hover:bg-[var(--sidebar-hover)] hover:border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--text-main)]",
+            : 'hover:bg-[var(--sidebar-hover)] hover:border-[var(--card-border)] text-[var(--text-muted)] hover:text-[var(--text-main)]',
         )
       }
     >
@@ -324,12 +324,12 @@ function SessionLink({
           <div className="flex-1 min-w-0">
             <div
               className={cn(
-                "text-[11px] font-bold truncate leading-tight mb-0.5 flex items-center gap-1.5",
+                'text-[11px] font-bold truncate leading-tight mb-0.5 flex items-center gap-1.5',
                 isActive
-                  ? variant === "blue"
-                    ? "text-blue-700 dark:text-blue-300"
-                    : "text-emerald-700 dark:text-emerald-300"
-                  : "text-[var(--text-muted)] group-hover:text-[var(--text-main)]",
+                  ? variant === 'blue'
+                    ? 'text-blue-700 dark:text-blue-300'
+                    : 'text-emerald-700 dark:text-emerald-300'
+                  : 'text-[var(--text-muted)] group-hover:text-[var(--text-main)]',
               )}
             >
               <span className="truncate">{displayTitle}</span>
@@ -339,14 +339,14 @@ function SessionLink({
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    "font-mono text-[10px] font-bold tracking-tight shrink-0",
+                    'font-mono text-[10px] font-bold tracking-tight shrink-0',
                     isActive
-                      ? variant === "blue"
-                        ? "text-blue-600 dark:text-blue-200"
-                        : "text-emerald-600 dark:text-emerald-200"
-                      : variant === "blue"
-                        ? "text-blue-500/80"
-                        : "text-emerald-500/80",
+                      ? variant === 'blue'
+                        ? 'text-blue-600 dark:text-blue-200'
+                        : 'text-emerald-600 dark:text-emerald-200'
+                      : variant === 'blue'
+                        ? 'text-blue-500/80'
+                        : 'text-emerald-500/80',
                   )}
                 >
                   {session.sessionId.substring(0, 8)}
@@ -361,8 +361,8 @@ function SessionLink({
 
               <span className="text-[9px] font-medium opacity-60 dark:opacity-40 whitespace-nowrap overflow-hidden text-right text-[var(--text-dim)]">
                 {new Date(session.startTime).toLocaleDateString([], {
-                  month: "short",
-                  day: "numeric",
+                  month: 'short',
+                  day: 'numeric',
                 })}
               </span>
             </div>
@@ -370,7 +370,7 @@ function SessionLink({
 
           <Badge
             variant={
-              session.expressionQuality.score >= 80 ? "secondary" : "primary"
+              session.expressionQuality.score >= 80 ? 'secondary' : 'primary'
             }
             className="shrink-0 mt-0.5"
           >

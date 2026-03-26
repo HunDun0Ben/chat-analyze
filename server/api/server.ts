@@ -1,6 +1,3 @@
-
-
-
 import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
@@ -23,7 +20,9 @@ export function startServer(manager: SessionManager) {
   app.get('/api/projects', async (req, res) => {
     try {
       const { provider } = req.query;
-      res.json(manager.getProjects(provider as 'gemini' | 'chatgpt' | undefined));
+      res.json(
+        manager.getProjects(provider as 'gemini' | 'chatgpt' | undefined),
+      );
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
@@ -41,7 +40,7 @@ export function startServer(manager: SessionManager) {
     try {
       const sessions = manager.getAllSessions();
       // 返回精简版，用于搜索和侧边栏显示
-      const summary = sessions.map(s => ({
+      const summary = sessions.map((s) => ({
         sessionId: s.sessionId,
         sessionTitle: s.sessionTitle,
         projectName: s.projectName,
@@ -50,7 +49,7 @@ export function startServer(manager: SessionManager) {
         isCheckpoint: s.isCheckpoint,
         expressionQuality: { score: s.expressionQuality.score },
         // 只取第一条用户消息作为标题回退
-        firstMessage: s.messages.find(m => m.type === 'user')?.content || ''
+        firstMessage: s.messages.find((m) => m.type === 'user')?.content || '',
       }));
       res.json(summary);
     } catch (error) {
@@ -83,7 +82,7 @@ export function startServer(manager: SessionManager) {
       const sessions = manager.getAllSessions();
       const groups: Record<string, { totalScore: number; count: number }> = {};
 
-      sessions.forEach(s => {
+      sessions.forEach((s) => {
         const date = s.startTime.split('T')[0];
         if (!groups[date]) groups[date] = { totalScore: 0, count: 0 };
         groups[date].totalScore += s.expressionQuality.score;
@@ -93,7 +92,7 @@ export function startServer(manager: SessionManager) {
       const timeline = Object.entries(groups)
         .map(([date, data]) => ({
           date,
-          avgScore: Math.round(data.totalScore / data.count)
+          avgScore: Math.round(data.totalScore / data.count),
         }))
         .sort((a, b) => a.date.localeCompare(b.date));
 
@@ -106,11 +105,25 @@ export function startServer(manager: SessionManager) {
   app.get('/api/stats/models', async (req, res) => {
     try {
       const sessions = manager.getAllSessions();
-      const modelStats: Record<string, { count: number; totalScore: number; totalTokens: number; totalTurns: number }> = {};
+      const modelStats: Record<
+        string,
+        {
+          count: number;
+          totalScore: number;
+          totalTokens: number;
+          totalTurns: number;
+        }
+      > = {};
 
-      sessions.forEach(s => {
+      sessions.forEach((s) => {
         const mid = s.modelId || 'unknown';
-        if (!modelStats[mid]) modelStats[mid] = { count: 0, totalScore: 0, totalTokens: 0, totalTurns: 0 };
+        if (!modelStats[mid])
+          modelStats[mid] = {
+            count: 0,
+            totalScore: 0,
+            totalTokens: 0,
+            totalTurns: 0,
+          };
         modelStats[mid].count++;
         modelStats[mid].totalScore += s.expressionQuality.score;
         modelStats[mid].totalTokens += s.stats.tokenUsage.total;
@@ -122,7 +135,7 @@ export function startServer(manager: SessionManager) {
         sessionCount: data.count,
         avgScore: Math.round(data.totalScore / data.count),
         avgTokens: Math.round(data.totalTokens / data.count),
-        avgTurns: Math.round(data.totalTurns / data.count)
+        avgTurns: Math.round(data.totalTurns / data.count),
       }));
 
       res.json(result);
@@ -136,12 +149,18 @@ export function startServer(manager: SessionManager) {
       const session = manager.getSession(req.params.id);
       if (!session) return res.status(404).json({ error: 'Session not found' });
 
-      const skillName = session.sessionTitle || session.projectName.split('/').pop() || 'new-skill';
+      const skillName =
+        session.sessionTitle ||
+        session.projectName.split('/').pop() ||
+        'new-skill';
       const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages.find((m: { type: string; content: string }) => m.type === 'user')?.content || 'N/A'}\n- **Model**: ${session.modelId}\n`;
 
       const exportDir = path.resolve(__dirname, '../../exports/skills');
-      const exportPath = path.join(exportDir, `${skillName.replace(/[/\\?%*:|"<>\s]/g, '_')}-${session.sessionId.slice(0, 8)}.md`);
-      
+      const exportPath = path.join(
+        exportDir,
+        `${skillName.replace(/[/\\?%*:|"<>\s]/g, '_')}-${session.sessionId.slice(0, 8)}.md`,
+      );
+
       if (!fs.existsSync(exportDir)) {
         fs.mkdirSync(exportDir, { recursive: true });
       }

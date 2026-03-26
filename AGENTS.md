@@ -30,7 +30,7 @@
 - **Theming & Design Tokens**: 本项目支持 Light/Dark 模式。**严禁在组件中硬编码颜色值**。请务必阅读 [Theming Guide](./docs/THEMING.md) 并使用 CSS 变量（Tokens）进行开发。
 - **Commit Messages**: 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 标准。
 - **ESM Imports (Server)**: 在 `server` 工作区中，由于启用了 `type: "module"`，所有相对导入**必须包含 `.js` 扩展名**（例如 `import { Foo } from './Foo.js'`).
-- **React Components**: 
+- **React Components**:
   - 避免在 `useEffect` 中同步调用 `setState` 触发级联渲染。
   - 使用渲染时状态同步 (State Sync during render) 模式处理基于 Props/ID 变化的状态重置。
   - 确保 `useMemo` 依赖项完整。

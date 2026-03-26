@@ -1,6 +1,6 @@
-import * as chokidar from "chokidar";
-import path from "node:path";
-import { SessionManager } from "./manager.js";
+import * as chokidar from 'chokidar';
+import path from 'node:path';
+import { SessionManager } from './manager.js';
 
 export class ChatWatcher {
   private watcher: chokidar.FSWatcher;
@@ -20,11 +20,11 @@ export class ChatWatcher {
       persistent: true,
       ignoreInitial: true,
       ignored: [
-        "**/node_modules/**",
-        "**/.git/**",
-        "**/package.json",
-        "**/package-lock.json",
-        "**/tsconfig.json",
+        '**/node_modules/**',
+        '**/.git/**',
+        '**/package.json',
+        '**/package-lock.json',
+        '**/tsconfig.json',
       ],
     });
   }
@@ -34,7 +34,7 @@ export class ChatWatcher {
       `[Watcher] Monitoring for chat updates in ${this.watchPaths.length} paths.`,
     );
 
-    this.watcher.on("add", async (filePath: string) => {
+    this.watcher.on('add', async (filePath: string) => {
       console.log(`[Detected]: ${path.basename(filePath)}`);
       try {
         const session = await this.manager.upsertFromFile(filePath);
@@ -44,7 +44,7 @@ export class ChatWatcher {
       }
     });
 
-    this.watcher.on("change", async (filePath: string) => {
+    this.watcher.on('change', async (filePath: string) => {
       console.log(`[Session Updated]: ${path.basename(filePath)}`);
       try {
         await this.manager.upsertFromFile(filePath);

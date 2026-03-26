@@ -1,19 +1,19 @@
-import { SessionParser } from "../core/parser.js";
-import { SessionStorage } from "../db/storage.js";
-import path from "node:path";
-import fs from "node:fs/promises";
+import { SessionParser } from '../core/parser.js';
+import { SessionStorage } from '../db/storage.js';
+import path from 'node:path';
+import fs from 'node:fs/promises';
 
 async function runTest() {
   const parser = new SessionParser();
-  const storage = new SessionStorage("./chat_analyze.db");
-  const chatsDir = "/home/ben/.gemini/tmp/chat-analyze/chats/";
+  const storage = new SessionStorage('./chat_analyze.db');
+  const chatsDir = '/home/ben/.gemini/tmp/chat-analyze/chats/';
 
   try {
     const files = await fs.readdir(chatsDir);
-    const jsonFiles = files.filter((f) => f.endsWith(".json"));
+    const jsonFiles = files.filter((f) => f.endsWith('.json'));
 
     if (jsonFiles.length === 0) {
-      console.log("No session files found.");
+      console.log('No session files found.');
       return;
     }
 
@@ -36,7 +36,7 @@ async function runTest() {
       console.log(`  * Score:    ${saved[0].expressionQuality.score}`);
     }
   } catch (err) {
-    console.error("Analysis or Storage failed:", err);
+    console.error('Analysis or Storage failed:', err);
   } finally {
     storage.close();
   }

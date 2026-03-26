@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { exportSkill as apiExportSkill } from '../../api';
 

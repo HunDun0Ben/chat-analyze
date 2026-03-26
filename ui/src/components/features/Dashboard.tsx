@@ -7,7 +7,7 @@ import {
   ShieldCheck,
   Loader2,
   AlertCircle,
-} from "lucide-react";
+} from 'lucide-react';
 import {
   XAxis,
   YAxis,
@@ -16,13 +16,13 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-} from "recharts";
-import { useStats } from "../../features/dashboard/useStats";
-import { Card, CardHeader, CardContent } from "../ui/Card";
-import { InsightCard } from "./InsightCard";
-import { Badge } from "../ui/Badge";
-import { Progress } from "../ui/Progress";
-import { useTheme } from "../../features/theme/useTheme";
+} from 'recharts';
+import { useStats } from '../../features/dashboard/useStats';
+import { Card, CardHeader, CardContent } from '../ui/Card';
+import { InsightCard } from './InsightCard';
+import { Badge } from '../ui/Badge';
+import { Progress } from '../ui/Progress';
+import { useTheme } from '../../features/theme/useTheme';
 
 export function Dashboard() {
   const { data, models, loading, error } = useStats();
@@ -46,10 +46,10 @@ export function Dashboard() {
   }
 
   const chartColors = {
-    grid: theme === "dark" ? "#1e293b" : "#e2e8f0",
-    tick: theme === "dark" ? "#475569" : "#64748b",
-    tooltipBg: theme === "dark" ? "#0f172a" : "#ffffff",
-    tooltipBorder: theme === "dark" ? "#1e293b" : "#e2e8f0",
+    grid: theme === 'dark' ? '#1e293b' : '#e2e8f0',
+    tick: theme === 'dark' ? '#475569' : '#64748b',
+    tooltipBg: theme === 'dark' ? '#0f172a' : '#ffffff',
+    tooltipBorder: theme === 'dark' ? '#1e293b' : '#e2e8f0',
   };
 
   return (
@@ -143,11 +143,11 @@ export function Dashboard() {
                         contentStyle={{
                           backgroundColor: chartColors.tooltipBg,
                           border: `1px solid ${chartColors.tooltipBorder}`,
-                          borderRadius: "12px",
-                          fontSize: "10px",
-                          color: "var(--text-main)",
+                          borderRadius: '12px',
+                          fontSize: '10px',
+                          color: 'var(--text-main)',
                         }}
-                        itemStyle={{ fontWeight: "bold" }}
+                        itemStyle={{ fontWeight: 'bold' }}
                       />
                       <Area
                         type="monotone"
@@ -214,7 +214,7 @@ export function Dashboard() {
               value={
                 data.length > 0
                   ? `${Math.round(Math.max(...data.map((d) => d.avgScore)))}%`
-                  : "--"
+                  : '--'
               }
               desc="Highest daily average prompt quality"
             />
@@ -223,8 +223,8 @@ export function Dashboard() {
               title="Champion Model"
               value={
                 models.length > 0
-                  ? models[0]?.modelId.split("/").pop() || "--"
-                  : "--"
+                  ? models[0]?.modelId.split('/').pop() || '--'
+                  : '--'
               }
               desc="Best performing model by avg score"
             />

@@ -1,6 +1,3 @@
-
-
-
 import { Progress } from '../ui/Progress';
 
 interface TokenBarProps {
@@ -15,7 +12,9 @@ export function TokenBar({ label, value, max, color }: TokenBarProps) {
     <div className="space-y-1">
       <div className="flex justify-between text-[10px]">
         <span className="text-slate-500">{label}</span>
-        <span className="font-mono text-slate-400">{value.toLocaleString()}</span>
+        <span className="font-mono text-slate-400">
+          {value.toLocaleString()}
+        </span>
       </div>
       <Progress value={value} max={max} indicatorClassName={color} />
     </div>

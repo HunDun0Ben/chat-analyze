@@ -1,11 +1,8 @@
-
-
-
 import crypto from 'node:crypto';
-import { 
-  AnalyzedSession, 
+import {
+  AnalyzedSession,
   SessionMessage,
-  ToolCall
+  ToolCall,
 } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
 
@@ -34,7 +31,10 @@ interface GeminiHistoryItem {
  * Handles the native Gemini API history format (with 'history' and 'parts').
  */
 export class GeminiCheckpointParser extends BaseParser {
-  async analyze(session: unknown, options: ParserOptions): Promise<AnalyzedSession> {
+  async analyze(
+    session: unknown,
+    options: ParserOptions,
+  ): Promise<AnalyzedSession> {
     const { filePath, fileName } = options;
     const s = session as { history: GeminiHistoryItem[] };
 
@@ -50,7 +50,7 @@ export class GeminiCheckpointParser extends BaseParser {
         id: `msg-${index}`,
         timestamp,
         type,
-        content: ""
+        content: '',
       };
 
       if (Array.isArray(h.parts)) {
@@ -62,9 +62,9 @@ export class GeminiCheckpointParser extends BaseParser {
             if (part.thought === true) {
               if (!msg.thoughts) msg.thoughts = [];
               msg.thoughts.push({
-                subject: "Thought Process",
+                subject: 'Thought Process',
                 description: part.text,
-                timestamp
+                timestamp,
               });
             } else {
               texts.push(part.text);
@@ -77,7 +77,7 @@ export class GeminiCheckpointParser extends BaseParser {
               name: part.functionCall.name,
               args: part.functionCall.args || {},
               status: 'pending',
-              timestamp
+              timestamp,
             });
           }
 
@@ -88,11 +88,11 @@ export class GeminiCheckpointParser extends BaseParser {
               args: {}, // Response doesn't have args
               result: part.functionResponse.response,
               status: 'success',
-              timestamp
+              timestamp,
             });
           }
         }
-        
+
         msg.content = texts.join('\n').trim();
         if (toolCalls.length > 0) msg.toolCalls = toolCalls;
       }
@@ -100,27 +100,34 @@ export class GeminiCheckpointParser extends BaseParser {
       return msg;
     });
 
-    const userMsgs = messages.filter(m => m.type === 'user');
-    const geminiMsgs = messages.filter(m => m.type === 'gemini');
-    
+    const userMsgs = messages.filter((m) => m.type === 'user');
+    const geminiMsgs = messages.filter((m) => m.type === 'gemini');
+
     const toolChain = messages
-      .flatMap(m => m.toolCalls || [])
-      .map(tc => tc.name);
+      .flatMap((m) => m.toolCalls || [])
+      .map((tc) => tc.name);
 
-    const firstPrompt = userMsgs.find(m => m.content)?.content || "";
+    const firstPrompt = userMsgs.find((m) => m.content)?.content || '';
     const category = this.coachService.detectCategory(firstPrompt, toolChain);
-    const correctionCount = this.coachService.countCorrections(userMsgs, messages);
+    const correctionCount = this.coachService.countCorrections(
+      userMsgs,
+      messages,
+    );
 
-    const projectName = this.extractProjectName(fileName || "Unknown");
+    const projectName = this.extractProjectName(fileName || 'Unknown');
     const sessionId = this.generateSessionId(filePath);
 
     // 优先使用完整的文件名（已解码）作为 sessionTitle
-    let sessionTitle = (fileName || "checkpoint").replace(/^checkpoint-/, '').replace(/\.json$/, '');
+    let sessionTitle = (fileName || 'checkpoint')
+      .replace(/^checkpoint-/, '')
+      .replace(/\.json$/, '');
     try {
-      sessionTitle = decodeURIComponent(sessionTitle).replace(/^["']/, '').replace(/["']$/, '');
+      sessionTitle = decodeURIComponent(sessionTitle)
+        .replace(/^["']/, '')
+        .replace(/["']$/, '');
     } catch {
       // 如果解码失败，回退到首条消息或原始文件名
-      sessionTitle = firstPrompt.substring(0, 50) || (fileName || "checkpoint");
+      sessionTitle = firstPrompt.substring(0, 50) || fileName || 'checkpoint';
     }
 
     return {
@@ -128,16 +135,20 @@ export class GeminiCheckpointParser extends BaseParser {
       projectName,
       sessionTitle,
       isCheckpoint: true,
-      projectHash: "", // Not available in checkpoints
-      modelId: "gemini-pro", // Fallback for checkpoints
+      projectHash: '', // Not available in checkpoints
+      modelId: 'gemini-pro', // Fallback for checkpoints
       category,
       provider: 'gemini',
       startTime: messages[0]?.timestamp || new Date().toISOString(),
-      lastUpdated: messages[messages.length - 1]?.timestamp || new Date().toISOString(),
+      lastUpdated:
+        messages[messages.length - 1]?.timestamp || new Date().toISOString(),
       expressionQuality: {
-        score: this.coachService.calculateQualityScore(correctionCount, firstPrompt),
+        score: this.coachService.calculateQualityScore(
+          correctionCount,
+          firstPrompt,
+        ),
         ambiguities: this.coachService.detectAmbiguities(firstPrompt),
-        suggestion: this.coachService.generateSuggestion(firstPrompt)
+        suggestion: this.coachService.generateSuggestion(firstPrompt),
       },
       stats: {
         turns: userMsgs.length + geminiMsgs.length,
@@ -145,9 +156,9 @@ export class GeminiCheckpointParser extends BaseParser {
         geminiTurns: geminiMsgs.length,
         corrections: correctionCount,
         toolChain,
-        tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 } // Checkpoints don't usually include token info
+        tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }, // Checkpoints don't usually include token info
       },
-      messages
+      messages,
     };
   }
 
@@ -160,7 +171,7 @@ export class GeminiCheckpointParser extends BaseParser {
     try {
       // 1. URL 解码 (处理 %22, %20 等)
       name = decodeURIComponent(fileName);
-      
+
       // 有时可能存在双重编码，再次检查
       if (name.includes('%')) {
         name = decodeURIComponent(name);
@@ -178,8 +189,8 @@ export class GeminiCheckpointParser extends BaseParser {
     // 4. 提取第一个有意义的词作为项目名
     // 例如 "redis base dir" -> "redis"
     // 如果是单个词则保留
-    const parts = name.split(/[\s_-]/).filter(p => p.length > 0);
-    
+    const parts = name.split(/[\s_-]/).filter((p) => p.length > 0);
+
     if (parts.length > 0) {
       const firstPart = parts[0];
       // 如果第一个词太短且后面还有词，尝试合并（例如 "my app"）
@@ -189,7 +200,7 @@ export class GeminiCheckpointParser extends BaseParser {
       return firstPart;
     }
 
-    return name || "Imported";
+    return name || 'Imported';
   }
 
   private generateSessionId(filePath: string): string {

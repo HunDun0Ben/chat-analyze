@@ -1,6 +1,7 @@
-#  Gemini Chat Analyze & Evolver - 任务追踪清单 (2026-03-25)
+# Gemini Chat Analyze & Evolver - 任务追踪清单 (2026-03-25)
 
 ## 阶段一：架构重构与多供应商支持 (DONE)
+
 - [x] **任务 1.1: 解析器解耦 (Strategy Pattern)**
   - 引入 `BaseParser`, `GeminiParser`, `ChatGPTParser`。
 - [x] **任务 1.2: 项目自动发现服务**
@@ -11,6 +12,7 @@
   - 侧边栏支持按 Provider (Gemini/ChatGPT) 切换视图。
 
 ## 阶段二：系统稳定性与性能优化 (DONE)
+
 - [x] **任务 2.1: 内存统计聚合**
   - 将 API 统计逻辑从 SQL 查询迁移至内存 Map-Reduce，解决数据库冷启动报错。
 - [x] **任务 2.2: 前端防御性加固**
@@ -19,6 +21,7 @@
   - 重构 `SessionLink`：突出首条指令内容，优化 ID 与日期布局。
 
 ## 阶段三：未来规划 (TODO)
+
 - [ ] **任务 3.1: Skill 孵化与导出**
   - 能够将选中的高质量会话轨迹一键转化为 `SKILL.md`。
 - [ ] **任务 3.2: 多模型表现横向对比 (IQ Comparison)**

@@ -1,6 +1,3 @@
-
-
-
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
@@ -35,7 +32,10 @@ function getWatchPaths(homeDir: string): string[] {
         return config.WATCH_PATHS.split(':');
       }
     } catch (err) {
-      console.warn(`[Config] Failed to parse ${configPath}:`, (err as Error).message);
+      console.warn(
+        `[Config] Failed to parse ${configPath}:`,
+        (err as Error).message,
+      );
     }
   }
 
@@ -49,14 +49,20 @@ function getWatchPaths(homeDir: string): string[] {
         const match = line.match(/^\s*WATCH_PATHS\s*=\s*(.*)$/);
         if (match) {
           let val = match[1].trim();
-          if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          if (
+            (val.startsWith('"') && val.endsWith('"')) ||
+            (val.startsWith("'") && val.endsWith("'"))
+          ) {
             val = val.slice(1, -1);
           }
           return val.split(':');
         }
       }
     } catch (err) {
-      console.warn(`[Config] Failed to read ${envFilePath}:`, (err as Error).message);
+      console.warn(
+        `[Config] Failed to read ${envFilePath}:`,
+        (err as Error).message,
+      );
     }
   }
 
@@ -66,11 +72,11 @@ function getWatchPaths(homeDir: string): string[] {
 
 async function bootstrap() {
   const homeDir = os.homedir();
-  
+
   // 1. 解析监听路径
   const rawPaths = getWatchPaths(homeDir);
-  
-  const watchPaths = rawPaths.map(p => {
+
+  const watchPaths = rawPaths.map((p) => {
     let resolved = p.trim();
     if (resolved.startsWith('~')) {
       resolved = path.join(homeDir, resolved.slice(1));
@@ -80,16 +86,21 @@ async function bootstrap() {
 
   console.log('--- Gemini Chat Analyze & Evolver ---');
   console.log(`[System] Initializing with ${watchPaths.length} paths:`);
-  watchPaths.forEach(p => console.log(`  - ${p}`));
-  
+  watchPaths.forEach((p) => console.log(`  - ${p}`));
+
   // 2. 实例化服务组件 (依赖注入)
   const parser = new SessionParser();
   const storage = new SessionStorage();
   const discoveryService = new DiscoveryService();
 
   // 3. 初始化 Session 管理器
-  const manager = new SessionManager(watchPaths, parser, storage, discoveryService);
-  
+  const manager = new SessionManager(
+    watchPaths,
+    parser,
+    storage,
+    discoveryService,
+  );
+
   // 启动时进行首次全量同步 (以目录为准)
   try {
     await manager.init();
@@ -119,7 +130,7 @@ async function bootstrap() {
   });
 }
 
-bootstrap().catch(err => {
+bootstrap().catch((err) => {
   console.error('[Fatal] Failed to start:', err);
   process.exit(1);
 });

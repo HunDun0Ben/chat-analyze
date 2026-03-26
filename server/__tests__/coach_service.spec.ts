@@ -1,6 +1,3 @@
-
-
-
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CoachService } from '../core/services/CoachService.js';
 
@@ -22,7 +19,10 @@ describe('CoachService', () => {
     });
 
     it('should penalize corrections', () => {
-      const score = coachService.calculateQualityScore(1, 'Long enough prompt that is not short');
+      const score = coachService.calculateQualityScore(
+        1,
+        'Long enough prompt that is not short',
+      );
       // 100 - 15 (correction) - 10 (no context) = 75
       expect(score).toBe(75);
     });

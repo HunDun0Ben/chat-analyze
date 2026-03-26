@@ -1,12 +1,12 @@
-import Database from "better-sqlite3";
-import { AnalyzedSession } from "../types/index.js";
-import path from "node:path";
-import fs from "node:fs";
+import Database from 'better-sqlite3';
+import { AnalyzedSession } from '../types/index.js';
+import path from 'node:path';
+import fs from 'node:fs';
 
 export class SessionStorage {
   private db: Database.Database;
 
-  constructor(dbPath: string = "./chat_analyze.db") {
+  constructor(dbPath: string = './chat_analyze.db') {
     const dir = path.dirname(dbPath);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
@@ -63,18 +63,18 @@ export class SessionStorage {
   getSessions(
     query: { category?: string; limit?: number } = {},
   ): AnalyzedSession[] {
-    let sql = "SELECT * FROM sessions";
+    let sql = 'SELECT * FROM sessions';
     const params: (string | number)[] = [];
 
     if (query.category) {
-      sql += " WHERE category = ?";
+      sql += ' WHERE category = ?';
       params.push(query.category);
     }
 
-    sql += " ORDER BY startTime DESC";
+    sql += ' ORDER BY startTime DESC';
 
     if (query.limit) {
-      sql += " LIMIT ?";
+      sql += ' LIMIT ?';
       params.push(query.limit);
     }
 
@@ -84,14 +84,14 @@ export class SessionStorage {
 
   getSessionById(sessionId: string): AnalyzedSession | null {
     const row = this.db
-      .prepare("SELECT data FROM sessions WHERE sessionId = ?")
+      .prepare('SELECT data FROM sessions WHERE sessionId = ?')
       .get(sessionId) as { data: string } | undefined;
     return row ? (JSON.parse(row.data) as AnalyzedSession) : null;
   }
 
   getProjects(): string[] {
     const rows = this.db
-      .prepare("SELECT DISTINCT projectName FROM sessions")
+      .prepare('SELECT DISTINCT projectName FROM sessions')
       .all() as { projectName: string }[];
     return rows.map((row) => row.projectName);
   }

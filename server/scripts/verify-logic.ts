@@ -13,7 +13,12 @@ async function verify() {
   const storage = new SessionStorage();
   const parser = new SessionParser();
   const discoveryService = new DiscoveryService();
-  const manager = new SessionManager(watchPath, parser, storage, discoveryService);
+  const manager = new SessionManager(
+    watchPath,
+    parser,
+    storage,
+    discoveryService,
+  );
 
   console.log(`\n1. [Initialization] Scanning ${watchPath}...`);
   await manager.init();
@@ -24,10 +29,14 @@ async function verify() {
 
   if (projects.length > 0) {
     const firstProject = projects[0];
-    console.log(`\n3. [Sessions for Project] Calling manager.getSessionsByProject("${firstProject}")...`);
+    console.log(
+      `\n3. [Sessions for Project] Calling manager.getSessionsByProject("${firstProject}")...`,
+    );
     const sessions = manager.getSessionsByProject(firstProject);
-    console.log(`Found ${sessions.length} sessions in project "${firstProject}".`);
-    
+    console.log(
+      `Found ${sessions.length} sessions in project "${firstProject}".`,
+    );
+
     if (sessions.length > 0) {
       console.log('Sample Session Sample:');
       console.log(`  - ID: ${sessions[0].sessionId}`);

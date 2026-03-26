@@ -1,6 +1,3 @@
-
-
-
 import React from 'react';
 import { cn } from '../../utils';
 
@@ -18,22 +15,33 @@ interface TabsProps {
   className?: string;
 }
 
-export const Tabs = ({ tabs, activeTab, onTabChange, className }: TabsProps) => {
+export const Tabs = ({
+  tabs,
+  activeTab,
+  onTabChange,
+  className,
+}: TabsProps) => {
   return (
-    <div className={cn("flex border-b border-[var(--card-border)] h-12 shrink-0", className)}>
+    <div
+      className={cn(
+        'flex border-b border-[var(--card-border)] h-12 shrink-0',
+        className,
+      )}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
-        const activeClass = tab.activeColor || "text-amber-400 border-amber-500 bg-amber-500/5";
-        
+        const activeClass =
+          tab.activeColor || 'text-amber-400 border-amber-500 bg-amber-500/5';
+
         return (
-          <button 
+          <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              "flex-1 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all",
-              isActive 
-                ? `${activeClass} border-b-2` 
-                : "text-slate-600 hover:text-slate-400 hover:bg-white/5"
+              'flex-1 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-widest transition-all',
+              isActive
+                ? `${activeClass} border-b-2`
+                : 'text-slate-600 hover:text-slate-400 hover:bg-white/5',
             )}
           >
             {tab.icon}

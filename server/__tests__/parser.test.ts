@@ -1,6 +1,3 @@
-
-
-
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionParser } from '../core/parser.js';
 import path from 'node:path';
@@ -24,17 +21,25 @@ describe('SessionParser', () => {
     // 模拟包含长哈希项目名的 JSON
     const projectDir = path.join(tempDir, 'my-cool-project', 'chats');
     await fs.mkdir(projectDir, { recursive: true });
-    
+
     const mockSession = {
-      sessionId: "test-session-1",
-      projectName: "5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f",
-      projectHash: "5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f",
+      sessionId: 'test-session-1',
+      projectName:
+        '5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f',
+      projectHash:
+        '5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f',
       startTime: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
       messages: [
-        { id: "1", type: "user", content: "Hello", timestamp: Date.now() },
-        { id: "2", type: "gemini", content: "Hi", timestamp: Date.now(), model: "gemini-1.5-pro" }
-      ]
+        { id: '1', type: 'user', content: 'Hello', timestamp: Date.now() },
+        {
+          id: '2',
+          type: 'gemini',
+          content: 'Hi',
+          timestamp: Date.now(),
+          model: 'gemini-1.5-pro',
+        },
+      ],
     };
 
     const filePath = path.join(projectDir, 'session-1.json');
@@ -48,14 +53,14 @@ describe('SessionParser', () => {
   it('should prefer internal project name when it is NOT a long hash', async () => {
     const projectDir = path.join(tempDir, 'ignore-this-dir', 'chats');
     await fs.mkdir(projectDir, { recursive: true });
-    
+
     const mockSession = {
-      sessionId: "test-session-2",
-      projectName: "ValidProjectName",
-      projectHash: "some-hash",
+      sessionId: 'test-session-2',
+      projectName: 'ValidProjectName',
+      projectHash: 'some-hash',
       startTime: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
-      messages: []
+      messages: [],
     };
 
     const filePath = path.join(projectDir, 'session-2.json');
@@ -69,14 +74,16 @@ describe('SessionParser', () => {
   it('should correctly handle paths without "chats" subdirectory', async () => {
     const projectDir = path.join(tempDir, 'simple-dir');
     await fs.mkdir(projectDir, { recursive: true });
-    
+
     const mockSession = {
-      sessionId: "test-session-3",
-      projectName: "0000000000000000000000000000000000000000000000000000000000000000",
-      projectHash: "0000000000000000000000000000000000000000000000000000000000000000",
+      sessionId: 'test-session-3',
+      projectName:
+        '0000000000000000000000000000000000000000000000000000000000000000',
+      projectHash:
+        '0000000000000000000000000000000000000000000000000000000000000000',
       startTime: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
-      messages: []
+      messages: [],
     };
 
     const filePath = path.join(projectDir, 'session-3.json');
