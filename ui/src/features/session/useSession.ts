@@ -19,7 +19,7 @@ export function useSessionExport() {
       await apiExportSkill(sessionId);
       setExported(true);
       setTimeout(() => setExported(false), 3000);
-    } catch (e) {
+    } catch {
       setError('Export failed');
     } finally {
       setExporting(false);

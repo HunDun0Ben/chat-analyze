@@ -1,7 +1,7 @@
-import { test, expect } from '@playwright/test';
+import { test } from '@playwright/test';
 
 test('capture navigation crash', async ({ page }) => {
-  const errors: any[] = [];
+  const errors: string[] = [];
   page.on('pageerror', error => {
     errors.push(error.message);
   });

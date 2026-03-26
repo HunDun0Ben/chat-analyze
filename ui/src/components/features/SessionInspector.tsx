@@ -46,7 +46,7 @@ export function SessionInspector({
       <Tabs 
         tabs={tabs} 
         activeTab={activeTab} 
-        onTabChange={(id) => setActiveTab(id as any)} 
+        onTabChange={(id) => setActiveTab(id as 'intel' | 'timeline')} 
       />
       
       <div className="flex-1 overflow-y-auto min-w-[320px]">

@@ -4,11 +4,11 @@
  * Gemini Chat Analyze - Refactored Sidebar with Filename Titles
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Search, Folder, Zap, ChevronRight, LayoutDashboard, Database, Sparkles, MessageCircle } from 'lucide-react';
-import { fetchProjects, fetchSessions } from '../../api';
-import type { AnalyzedSession } from '../../types';
+import { fetchProjects, fetchSessions, fetchSessionsSummary } from '../../api';
+import type { AnalyzedSession, SidebarSession } from '../../types';
 import { cn } from '../../utils';
 import { Badge } from '../ui/Badge';
 import { Tabs } from '../ui/Tabs';
@@ -20,19 +20,65 @@ export function Sidebar() {
   const [projects, setProjects] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AnalyzedSession[]>([]);
+  const [allSessions, setAllSessions] = useState<SidebarSession[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchProjects(activeProvider).then(setProjects);
+    // 同时获取所有会话概要用于搜索和树构建
+    fetchSessionsSummary().then(setAllSessions);
   }, [activeProvider]);
 
+  // 当点击项目且非搜索模式时，加载具体会话
   useEffect(() => {
-    if (selectedProject) {
+    if (selectedProject && !search) {
       fetchSessions(selectedProject).then(setSessions);
     }
-  }, [selectedProject]);
+  }, [selectedProject, search]);
 
-  const filteredProjects = projects.filter(p => p.toLowerCase().includes(search.toLowerCase()));
+  // --- 核心搜索/过滤逻辑 ---
+  const terms = search.toLowerCase().split(/\s+/).filter(t => t.length > 0);
+  
+  // 计算每个项目在搜索模式下的状态
+  const projectSearchData = useMemo(() => {
+    if (terms.length === 0) return null;
+
+    const results: Record<string, { 
+      matches: boolean, 
+      visibleSessions: SidebarSession[] 
+    }> = {};
+
+    projects.forEach(projectName => {
+      // 检查项目名称是否包含所有关键词
+      const projectMatches = terms.every(t => projectName.toLowerCase().includes(t));
+      const projectSessions = allSessions.filter(s => s.projectName === projectName && s.provider === activeProvider);
+      
+      const matchingSessions = projectSessions.filter(s => {
+        // 检查该会话的所有字段“加起来”是否包含所有关键词
+        const combinedText = [
+          s.sessionId,
+          s.projectName,
+          s.sessionTitle,
+          s.firstMessage
+        ].join(' ').toLowerCase();
+
+        return terms.every(t => combinedText.includes(t));
+      });
+
+      // 规则：目录命中显示全部，否则仅显示匹配的会话
+      if (projectMatches || matchingSessions.length > 0) {
+        results[projectName] = {
+          matches: projectMatches,
+          visibleSessions: projectMatches ? projectSessions : matchingSessions
+        };
+      }
+    });
+    return results;
+  }, [search, projects, allSessions, activeProvider, terms]);
+
+  const visibleProjectList = search 
+    ? Object.keys(projectSearchData || {}) 
+    : projects;
 
   const tabs = [
     { id: 'gemini', label: 'Gemini', icon: <Sparkles size={14} />, activeColor: "text-blue-400 border-blue-500 bg-blue-500/5" },
@@ -53,7 +99,7 @@ export function Sidebar() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-blue-500 transition-colors" size={14} />
           <input 
             type="text" 
-            placeholder={`Search ${activeProvider}...`} 
+            placeholder={`Search ID, title, or projects...`} 
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full bg-slate-900 border border-white/5 rounded-xl py-2 pl-10 pr-4 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-black transition-all"
@@ -83,43 +129,53 @@ export function Sidebar() {
           <LayoutDashboard size={16} /> Dashboard
         </NavLink>
 
-        <div className="pt-2 pb-2 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-          {activeProvider === 'gemini' ? 'Active Projects' : 'Imported History'}
+        <div className="pt-2 pb-2 px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest flex justify-between items-center">
+          <span>{activeProvider === 'gemini' ? 'Active Projects' : 'Imported History'}</span>
+          {search && <Badge variant="primary" className="text-[9px] px-1.5 py-0">{visibleProjectList.length}</Badge>}
         </div>
 
-        {activeProvider === 'gemini' ? (
-          // Gemini View: Classic Project Tree
-          filteredProjects.map((project) => (
-            <div key={project} className="space-y-1">
-              <button 
-                onClick={() => setSelectedProject(selectedProject === project ? null : project)}
-                className={cn(
-                  "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group",
-                  selectedProject === project ? "bg-white/5 text-blue-400" : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <Folder size={16} className={selectedProject === project ? "text-blue-500" : "text-slate-600"} />
-                  <span className="truncate max-w-[140px]">{project}</span>
-                </div>
-                <ChevronRight size={14} className={cn("transition-transform text-slate-700", selectedProject === project && "rotate-90 text-blue-500")} />
-              </button>
+        {visibleProjectList.length > 0 ? (
+          visibleProjectList.map((project) => {
+            const isExpanded = search ? true : (selectedProject === project);
+            const displaySessions = search 
+              ? projectSearchData?.[project]?.visibleSessions || [] 
+              : sessions;
 
-              {selectedProject === project && (
-                <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 py-1 animate-in slide-in-from-top-2 duration-200">
-                  {sessions.map((session) => (
-                    <SessionLink key={session.sessionId} session={session} />
-                  ))}
-                </div>
-              )}
-            </div>
-          ))
+            return (
+              <div key={project} className="space-y-1">
+                <button 
+                  onClick={() => setSelectedProject(selectedProject === project ? null : project)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group",
+                    isExpanded ? "bg-white/5 text-blue-400" : "text-slate-500 hover:bg-white/5 hover:text-slate-300",
+                    search && projectSearchData?.[project]?.matches && "text-blue-300 ring-1 ring-blue-500/20 bg-blue-500/5"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Folder size={16} className={isExpanded ? "text-blue-500" : "text-slate-600"} />
+                    <span className="truncate max-w-[140px] text-left">{project}</span>
+                  </div>
+                  <ChevronRight size={14} className={cn("transition-transform text-slate-700", isExpanded && "rotate-90 text-blue-500")} />
+                </button>
+
+                {isExpanded && (
+                  <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 py-1 animate-in slide-in-from-top-2 duration-200">
+                    {displaySessions.length > 0 ? (
+                      displaySessions.map((session: AnalyzedSession | SidebarSession) => (
+                        <SessionLink key={session.sessionId} session={session} variant={activeProvider === 'gemini' ? 'blue' : 'emerald'} />
+                      ))
+
+                    ) : (
+                      !search && <div className="p-2 text-[10px] text-slate-600 italic">Loading sessions...</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })
         ) : (
-          // ChatGPT View: Handle single folder flat display and grouped display
-          <div className="space-y-1">
-            {filteredProjects.map((group) => (
-               <ChatGPTGroup key={group} title={group} />
-            ))}
+          <div className="px-3 py-8 text-center text-slate-500 text-xs italic">
+            No results found.
           </div>
         )}
       </nav>
@@ -127,10 +183,10 @@ export function Sidebar() {
       <div className="p-6 mt-auto border-t border-[var(--card-border)] bg-black/20">
         <div className="bg-gradient-to-br from-blue-600/10 to-emerald-600/10 border border-white/5 rounded-2xl p-4 space-y-3">
           <div className="flex items-center gap-2 text-[10px] font-bold text-white uppercase tracking-tighter">
-            <Database size={12} className="text-blue-400" /> Database Healthy
+            <Database size={12} className="text-blue-400" /> {allSessions.length} Sessions Indexed
           </div>
           <div className="text-[10px] text-slate-500 leading-snug">
-            AI sessions indexed from {activeProvider} source.
+            {search ? 'Filtering hierarchical view.' : 'Browse indexed AI sessions.'}
           </div>
         </div>
       </div>
@@ -138,57 +194,17 @@ export function Sidebar() {
   );
 }
 
-function ChatGPTGroup({ title }: { title: string }) {
-  const [sessions, setSessions] = useState<AnalyzedSession[]>([]);
-  const [expanded, setExpanded] = useState(false);
-
-  useEffect(() => {
-    if (expanded || title === 'Imported') {
-      fetchSessions(title).then(setSessions);
-    }
-  }, [expanded, title]);
-
-  // 如果项目名为 'Imported'（表示文件直接在根目录下），则不显示折叠层，直接平铺
-  if (title === 'Imported') {
-    return (
-      <div className="space-y-1">
-        {sessions.map(s => <SessionLink key={s.sessionId} session={s} variant="emerald" />)}
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-1">
-      <button 
-        onClick={() => setExpanded(!expanded)}
-        className={cn(
-          "w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-medium transition-all group",
-          expanded ? "bg-white/5 text-emerald-400" : "text-slate-500 hover:bg-white/5 hover:text-slate-300"
-        )}
-      >
-        <div className="flex items-center gap-3">
-          <MessageCircle size={16} className={expanded ? "text-emerald-500" : "text-slate-600"} />
-          <span className="truncate max-w-[140px] text-left">{title}</span>
-        </div>
-        <ChevronRight size={14} className={cn("transition-transform text-slate-700", expanded && "rotate-90 text-emerald-500")} />
-      </button>
-      {expanded && (
-        <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 py-1 animate-in slide-in-from-top-2 duration-200">
-          {sessions.map(s => <SessionLink key={s.sessionId} session={s} variant="emerald" />)}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession, variant?: 'blue' | 'emerald' }) {
+function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession | SidebarSession, variant?: 'blue' | 'emerald' }) {
   const colors = {
     blue: "bg-blue-500/10 border-blue-500/20 text-blue-400",
     emerald: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
   };
 
-  // 优先级：sessionTitle (文件名) -> messages[0] -> sessionId
-  const displayTitle = session.sessionTitle || session.messages.find(m => m.type === 'user')?.content || session.sessionId;
+  // 兼容逻辑：优先使用 sessionTitle (文件名) -> firstMessage (针对概要数据) -> messages[0] -> sessionId
+  const displayTitle = session.sessionTitle || 
+                       ('firstMessage' in session ? session.firstMessage : 
+                        ('messages' in session ? (session as any).messages.find((m: any) => m.type === 'user')?.content : '')) || 
+                       session.sessionId;
 
   return (
     <NavLink
@@ -244,3 +260,4 @@ function SessionLink({ session, variant = 'blue' }: { session: AnalyzedSession, 
     </NavLink>
   );
 }
+

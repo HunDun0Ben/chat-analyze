@@ -15,7 +15,6 @@ export function useStats() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    setLoading(true);
     Promise.all([fetchStatsTimeline(), fetchModelStats()])
       .then(([timeline, modelStats]) => {
         setData(Array.isArray(timeline) ? timeline : []);
