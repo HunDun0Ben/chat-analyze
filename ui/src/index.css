@@ -5,55 +5,94 @@
   --color-brand-primary: #3b82f6;
   --color-brand-secondary: #6366f1;
   
-  --color-bg-app: #020617;
-  --color-bg-sidebar: #0f172a;
-  --color-bg-card: #1e293b;
-  --color-bg-user-bubble: #1d4ed8; /* 调整后的 User 颜色 */
+  --color-bg-app: var(--app-bg);
+  --color-bg-sidebar: var(--sidebar-bg);
+  --color-bg-card: var(--card-bg);
   
-  --color-text-main: #f1f5f9;
-  --color-text-muted: #94a3b8;
-  --color-text-dim: #64748b;
+  --color-text-main: var(--text-main);
+  --color-text-muted: var(--text-muted);
+  --color-text-dim: var(--text-dim);
   
-  --color-border-subtle: #1e293b;
-  --color-border-strong: #334155;
+  --color-border-subtle: var(--card-border);
+  --color-border-strong: var(--border-strong);
 
   --radius-card: 1rem;
   --radius-bubble: 0.75rem;
 }
 
 :root {
-  /* 将令牌映射到全局变量，方便后续扩展暗黑/明亮模式切换 */
+  /* Light Mode Tokens - Enhanced Contrast */
+  --app-bg: #f8fafc;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #cbd5e1; /* 更深的边框 */
+  --card-bg: #ffffff;
+  --card-border: #e2e8f0; 
+  --border-strong: #94a3b8; /* 更强的强边框 */
+  
+  --text-main: #0f172a;
+  --text-muted: #334155; /* 加深 */
+  --text-dim: #64748b; /* 加深 */
+
+  --user-bg: #f1f5f9;
+  --user-border: #cbd5e1; /* 更清晰的用户框边界 */
+  --user-text: #0f172a;
+
+  --gemini-bg: #ffffff;
+  --gemini-border: #e2e8f0;
+
+  --input-bg: #f1f5f9;
+  --input-focus: #ffffff;
+
+  --sidebar-item-active: #f1f5f9;
+  --sidebar-hover: #f8fafc;
+}
+
+.dark {
+  /* Dark Mode Tokens */
   --app-bg: #020617;
   --sidebar-bg: #0b0f1a;
+  --sidebar-border: #1e2937;
   --card-bg: #111827;
   --card-border: #1f2937;
+  --border-strong: #334155;
   
-  --user-bg: #1e293b; /* 默认 User 框改为更稳重的深色 */
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --user-bg: #1e293b;
   --user-border: #3b82f640;
   --user-text: #e2e8f0;
 
   --gemini-bg: #111827;
   --gemini-border: #374151;
+
+  --input-bg: #0f172a;
+  --input-focus: #000000;
+
+  --sidebar-item-active: rgba(255, 255, 255, 0.05);
+  --sidebar-hover: rgba(255, 255, 255, 0.02);
 }
 
 body {
   margin: 0;
   overflow: hidden;
   background-color: var(--app-bg);
-  color: var(--color-text-main);
+  color: var(--text-main);
+  transition: background-color 0.2s, color 0.2s;
   font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 code, kbd, samp, pre {
   font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Source Code Pro', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-weight: 600; /* 让代码元素默认稍微粗一点 */
+  font-weight: 600;
 }
 
 b, strong {
   font-weight: 700;
 }
 
-/* 自定义滚动条样式，使其更符合 token 设计 */
+/* 自定义滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -61,9 +100,9 @@ b, strong {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: var(--border-strong);
   border-radius: 10px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--text-dim);
 }
