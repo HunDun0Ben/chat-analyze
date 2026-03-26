@@ -6,7 +6,6 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { DiscoveryService } from '../core/services/DiscoveryService.js';
-import path from 'node:path';
 
 describe('DiscoveryService', () => {
   let discoveryService: DiscoveryService;
