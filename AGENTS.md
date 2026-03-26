@@ -27,6 +27,7 @@
 ## Development Conventions
 
 - **Type Safety**: **严禁使用 `any` 类型**。必须定义明确的接口或使用 `unknown` / `Record<string, unknown>`。
+- **Theming & Design Tokens**: 本项目支持 Light/Dark 模式。**严禁在组件中硬编码颜色值**。请务必阅读 [Theming Guide](./docs/THEMING.md) 并使用 CSS 变量（Tokens）进行开发。
 - **Commit Messages**: 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 标准。
 - **ESM Imports (Server)**: 在 `server` 工作区中，由于启用了 `type: "module"`，所有相对导入**必须包含 `.js` 扩展名**（例如 `import { Foo } from './Foo.js'`).
 - **React Components**: 
