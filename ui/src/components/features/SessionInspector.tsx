@@ -226,7 +226,7 @@ export function SessionInspector({
           className="w-full"
         >
           {exporting ? (
-            <Loader2 className="animate-spin" size={14} />
+            <Loader2 className="animate-spin" size={14} data-testid="loader-icon" />
           ) : exported ? (
             <CheckCircle2 size={14} />
           ) : (

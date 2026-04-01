@@ -26,8 +26,17 @@
 ## Development Conventions
 
 - **Type Safety**: **严禁使用 `any` 类型**。必须定义明确的接口或使用 `unknown` / `Record<string, unknown>`。
+- **模块契约与接口**:
+  - 在组件、Hooks 和服务之间，**务必明确定义数据结构和函数签名**。避免不明确的输入输出，使用 TypeScript 提供的类型系统进行严格约束。
+  - 命名导出与默认导出必须保持一致，并在导入时正确匹配。
+- **导入路径管理**:
+  - 优先使用项目配置的路径别名（例如 `@/` 或 `~/`），以简化模块导入路径，减少相对路径过深导致的错误。
+  - 如必须使用相对路径，请仔细核对，确保路径的准确性。
+- **组件库使用**:
+  - 在开发新功能时，**优先复用 `ui/src/components/ui/` 目录下已定义的通用 UI 组件**。
+  - 在引入新组件或修改现有组件时，务必同步更新其接口定义和文档。通用 UI 组件应具备清晰、稳定的属性（props）接口。
 - **Theming & Design Tokens**: 本项目支持 Light/Dark 模式。**严禁在组件中硬编码颜色值**。请务必阅读 [Theming Guide](./docs/THEMING.md) 并使用 CSS 变量（Tokens）进行开发。
-- **Commit Messages**: 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 标准。
+- **Commit Messages**: 遵循 [Conventional Commits](https://www.conventionalcommits.org/) 标准。每次完成一个独立、功能完整的小任务后，及时提交代码。提交信息应清晰地说明本次提交的目的、内容和影响范围。
 - **ESM Imports (Server)**: 在 `server` 工作区中，由于启用了 `type: "module"`，所有相对导入**必须包含 `.js` 扩展名**（例如 `import { Foo } from './Foo.js'`).
 - **React Components**:
   - 避免在 `useEffect` 中同步调用 `setState` 触发级联渲染。
@@ -36,6 +45,9 @@
 
 ## Testing Conventions (Vitest)
 
+- **单元与集成测试**: 对于核心逻辑、React 组件（包括 Hooks、通用 UI 组件、Feature 组件）及服务模块，**必须编写单元测试和/或集成测试**。依赖 `useEffect` 或进行数据处理的 Hooks 尤其需要充分测试。
+- **测试隔离**: 确保不同测试框架（如 Vitest 和 Playwright）的测试文件和配置相互独立，避免交叉执行与错误。
+- **精准断言**: 测试断言应具体且精确，避免使用可能匹配到多个不相关元素的模糊查询（如 `getByText('0')`），优先使用 `getByRole`、`getByTestId` 或结合 `within` 等更具语义和精确性的查询方法。
 - **Environment Variables**: 在测试依赖环境变量的代码时，在 `beforeEach` 中使用 `vi.stubEnv('NAME', 'value')`，并在 `afterEach` 中使用 `vi.unstubAllEnvs()`。严禁直接修改 `process.env`。
 
 ## Coach Module & Auditing Logic
