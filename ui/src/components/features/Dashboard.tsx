@@ -94,10 +94,10 @@ export function Dashboard() {
   }
 
   const chartColors = {
-    grid: theme === 'dark' ? 'hsl(var(--border))' : 'hsl(var(--border))',
-    tick: 'hsl(var(--muted-foreground))',
-    tooltipBg: 'hsl(var(--background))',
-    tooltipBorder: 'hsl(var(--border))',
+    grid: 'var(--card-border)',
+    tick: 'var(--text-muted)',
+    tooltipBg: 'var(--card-bg)',
+    tooltipBorder: 'var(--card-border)',
   };
 
   return (
@@ -179,12 +179,12 @@ export function Dashboard() {
                     >
                       <stop
                         offset="5%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor="var(--color-brand-primary)"
                         stopOpacity={0.3}
                       />
                       <stop
                         offset="95%"
-                        stopColor="hsl(var(--primary))"
+                        stopColor="var(--color-brand-primary)"
                         stopOpacity={0}
                       />
                     </linearGradient>
@@ -219,7 +219,7 @@ export function Dashboard() {
                   <Area
                     type="monotone"
                     dataKey="avgScore"
-                    stroke="hsl(var(--primary))"
+                    stroke="var(--color-brand-primary)"
                     strokeWidth={2}
                     fill="url(#colorScore)"
                   />
