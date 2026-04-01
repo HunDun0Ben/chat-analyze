@@ -36,7 +36,36 @@ export const CardContent = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('px-8 pb-8 pt-4', className)} {...props}>
+  <div className={cn('p-6 pt-0', className)} {...props}>
     {children}
   </div>
+);
+
+export const CardTitle = ({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement>) => (
+  <h3
+    className={cn(
+      'text-lg font-semibold leading-none tracking-tight',
+      className
+    )}
+    {...props}
+  >
+    {children}
+  </h3>
+);
+
+export const CardDescription = ({
+  children,
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) => (
+  <p
+    className={cn('text-sm text-muted-foreground', className)}
+    {...props}
+  >
+    {children}
+  </p>
 );
