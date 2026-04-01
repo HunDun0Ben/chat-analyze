@@ -1,28 +1,24 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { fetchStatsTimeline, fetchModelStats } from '../../api';
 import type { StatsTimeline, ModelStat } from '../../types';
 
 export function useStats() {
-  const [data, setData] = useState<StatsTimeline[]>([]);
-  const [models, setModels] = useState<ModelStat[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data: timelineData, isLoading: timelineLoading, isError: timelineError } = useQuery<StatsTimeline[]>({
+    queryKey: ['dashboardStatsTimeline'],
+    queryFn: fetchStatsTimeline,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
-  useEffect(() => {
-    Promise.all([fetchStatsTimeline(), fetchModelStats()])
-      .then(([timeline, modelStats]) => {
-        setData(Array.isArray(timeline) ? timeline : []);
-        setModels(Array.isArray(modelStats) ? modelStats : []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error('Failed to fetch stats:', err);
-        setError(err instanceof Error ? err : new Error(String(err)));
-        setData([]);
-        setModels([]);
-        setLoading(false);
-      });
-  }, []);
+  const { data: modelStatsData, isLoading: modelStatsLoading, isError: modelStatsError } = useQuery<ModelStat[]>({
+    queryKey: ['dashboardModelStats'],
+    queryFn: fetchModelStats,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const data = Array.isArray(timelineData) ? timelineData : [];
+  const models = Array.isArray(modelStatsData) ? modelStatsData : [];
+  const loading = timelineLoading || modelStatsLoading;
+  const error = timelineError || modelStatsError;
 
   return { data, models, loading, error };
 }

@@ -30,7 +30,7 @@ describe('Dashboard Component', () => {
     useStatsMock.mockReturnValue({
       data: [],
       models: [],
-      loading: true,
+      loading: true, // Derived from isLoading
       error: null,
     });
 
@@ -47,8 +47,8 @@ describe('Dashboard Component', () => {
     useStatsMock.mockReturnValue({
       data: [],
       models: [],
-      loading: false,
-      error: new Error(errorMessage),
+      loading: false, // Derived from isLoading
+      error: new Error(errorMessage), // Pass the error directly
     });
 
     // Act
@@ -73,7 +73,7 @@ describe('Dashboard Component', () => {
     useStatsMock.mockReturnValue({
       data: mockData,
       models: mockModels,
-      loading: false,
+      loading: false, // Derived from isLoading
       error: null,
     });
 
