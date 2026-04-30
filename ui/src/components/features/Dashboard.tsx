@@ -1,11 +1,7 @@
 import { useMemo } from 'react';
 import {
   TrendingUp,
-  Activity,
-  Cpu,
-  Brain,
   Award,
-  ShieldCheck,
   Loader2,
   AlertCircle,
   BarChart2,
@@ -24,7 +20,6 @@ import {
 import { useStats } from '../../features/dashboard/useStats';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/Card';
 import { Badge } from '../ui/Badge';
-import { useTheme } from '../../features/theme/useTheme';
 
 const formatNumber = (num: number) => {
   if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
@@ -34,7 +29,6 @@ const formatNumber = (num: number) => {
 
 export function Dashboard() {
   const { data, models, loading, error } = useStats();
-  const { theme } = useTheme();
 
   const summary = useMemo(() => {
     if (!data || data.length === 0) {
@@ -57,10 +51,10 @@ export function Dashboard() {
     };
   }, [data]);
 
-  const championModel = useMemo(() => {
-    if (!models || models.length === 0) return null;
-    return [...models].sort((a, b) => b.avgScore - a.avgScore)[0];
-  }, [models]);
+  // const championModel = useMemo(() => { // championModel is not used in this component
+  //   if (!models || models.length === 0) return null;
+  //   return [...models].sort((a, b) => b.avgScore - a.avgScore)[0];
+  // }, [models]);
 
   if (loading) {
     return (
@@ -86,8 +80,8 @@ export function Dashboard() {
           Error: {error.message}
         </h2>
         <p className="text-[var(--text-muted)] max-w-md">
-          Failed to load dashboard data. Please ensure the server is running
-          and accessible.
+          Failed to load dashboard data. Please ensure the server is running and
+          accessible.
         </p>
       </div>
     );
@@ -121,14 +115,14 @@ export function Dashboard() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {summary.totalSessions}
-              </div>
+              <div className="text-2xl font-bold">{summary.totalSessions}</div>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Tokens</CardTitle>
+              <CardTitle className="text-sm font-medium">
+                Total Tokens
+              </CardTitle>
               <BarChart2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -170,13 +164,7 @@ export function Dashboard() {
               <ResponsiveContainer width="100%" height={300}>
                 <AreaChart data={data}>
                   <defs>
-                    <linearGradient
-                      id="colorScore"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
+                    <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                       <stop
                         offset="5%"
                         stopColor="var(--color-brand-primary)"

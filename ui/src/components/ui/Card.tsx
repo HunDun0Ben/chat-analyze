@@ -49,7 +49,7 @@ export const CardTitle = ({
   <h3
     className={cn(
       'text-lg font-semibold leading-none tracking-tight',
-      className
+      className,
     )}
     {...props}
   >
@@ -62,10 +62,7 @@ export const CardDescription = ({
   className,
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p
-    className={cn('text-sm text-muted-foreground', className)}
-    {...props}
-  >
+  <p className={cn('text-sm text-muted-foreground', className)} {...props}>
     {children}
   </p>
 );

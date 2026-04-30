@@ -1,5 +1,5 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { SessionInspector } from './SessionInspector';
 import * as useSessionHook from '../../features/session/useSession';
 import type { AnalyzedSession } from '../../types';
@@ -10,13 +10,16 @@ vi.mock('../../features/session/useSession', () => ({
 }));
 
 // Type assertion for the mock
-const useSessionExportMock = useSessionHook.useSessionExport as vi.Mock;
+const useSessionExportMock = useSessionHook.useSessionExport as Mock;
 
 const mockSession: AnalyzedSession = {
   sessionId: 'session-123',
-  projectId: 'project-abc',
-  timestamp: Date.now(),
+  projectHash: 'project-abc',
+  projectName: 'Project Name',
+  lastUpdated: new Date().toISOString(),
+  startTime: new Date().toISOString(),
   modelId: 'gemini-pro',
+  provider: 'gemini',
   expressionQuality: {
     score: 85,
     suggestion: 'Improve clarity in step-by-step instructions.',
@@ -25,11 +28,23 @@ const mockSession: AnalyzedSession = {
   category: 'Coding',
   stats: {
     turns: 10,
+    corrections: 0,
+    toolChain: [],
     tokenUsage: { total: 500, input: 300, output: 200 },
   },
   messages: [
-    { id: 'msg-1', type: 'user', content: 'Hello', timestamp: Date.now() - 100000 },
-    { id: 'msg-2', type: 'model', content: 'Hi there!', timestamp: Date.now() - 90000 },
+    {
+      id: 'msg-1',
+      type: 'user',
+      content: 'Hello',
+      timestamp: new Date(Date.now() - 100000).toISOString(),
+    },
+    {
+      id: 'msg-2',
+      type: 'gemini',
+      content: 'Hi there!',
+      timestamp: new Date(Date.now() - 90000).toISOString(),
+    },
   ],
 };
 
@@ -62,14 +77,19 @@ describe('SessionInspector Component', () => {
     expect(screen.getByText('10')).toBeInTheDocument();
     expect(screen.getByText('Coach Suggestion')).toBeInTheDocument();
     expect(
-      screen.getByText(/Improve clarity in step-by-step instructions/i)
+      screen.getByText(/Improve clarity in step-by-step instructions/i),
     ).toBeInTheDocument();
     expect(screen.getByText('clarity')).toBeInTheDocument();
     expect(screen.getByText('Resource Usage')).toBeInTheDocument();
   });
 
   it('should switch to Timeline tab and render messages', async () => {
-    render(<SessionInspector session={mockSession} onSelectMessage={onSelectMessageMock} />);
+    render(
+      <SessionInspector
+        session={mockSession}
+        onSelectMessage={onSelectMessageMock}
+      />,
+    );
 
     // Click on Timeline tab
     fireEvent.click(screen.getByText('Timeline'));
@@ -93,7 +113,9 @@ describe('SessionInspector Component', () => {
     });
     const { rerender } = render(<SessionInspector session={mockSession} />);
 
-    const exportButton = screen.getByRole('button', { name: /Incubate to SKILL.md/i });
+    const exportButton = screen.getByRole('button', {
+      name: /Incubate to SKILL.md/i,
+    });
     expect(exportButton).toBeInTheDocument();
     expect(exportButton).not.toBeDisabled();
 
@@ -107,9 +129,10 @@ describe('SessionInspector Component', () => {
       exported: false,
     });
     rerender(<SessionInspector session={mockSession} />);
-    expect(screen.getByRole('button', { name: /Incubate to SKILL.md/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /Incubate to SKILL.md/i }),
+    ).toBeDisabled();
     expect(screen.getByTestId('loader-icon')).toBeInTheDocument();
-
 
     // Test exported state
     useSessionExportMock.mockReturnValue({
@@ -118,7 +141,9 @@ describe('SessionInspector Component', () => {
       exported: true,
     });
     rerender(<SessionInspector session={mockSession} />);
-    expect(screen.getByRole('button', { name: /Skill Exported/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Skill Exported/i }),
+    ).toBeInTheDocument();
   });
 
   it('should render default message for no model data in Timeline', async () => {

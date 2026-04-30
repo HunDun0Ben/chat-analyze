@@ -64,6 +64,7 @@ export interface AnalyzedSession {
     tokenUsage: {
       input: number;
       output: number;
+      thoughts?: number;
       total: number;
     };
   };
@@ -73,6 +74,8 @@ export interface AnalyzedSession {
 export interface StatsTimeline {
   date: string;
   avgScore: number;
+  sessionCount: number;
+  totalTokens: number;
 }
 
 export interface ModelStat {

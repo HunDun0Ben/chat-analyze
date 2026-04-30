@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { Dashboard } from './Dashboard';
 import * as useStatsHook from '../../features/dashboard/useStats';
 import { useTheme } from '../../features/theme/useTheme';
@@ -13,8 +13,8 @@ vi.mock('../../features/theme/useTheme', () => ({
 }));
 
 // Type assertion for the mock
-const useStatsMock = useStatsHook.useStats as vi.Mock;
-const useThemeMock = useTheme as vi.Mock;
+const useStatsMock = useStatsHook.useStats as Mock;
+const useThemeMock = useTheme as Mock;
 
 describe('Dashboard Component', () => {
   beforeEach(() => {
@@ -55,9 +55,7 @@ describe('Dashboard Component', () => {
     render(<Dashboard />);
 
     // Assert
-    expect(
-      screen.getByText(`Error: ${errorMessage}`)
-    ).toBeInTheDocument();
+    expect(screen.getByText(`Error: ${errorMessage}`)).toBeInTheDocument();
   });
 
   it('should render stats when data is fetched successfully', () => {
@@ -67,8 +65,18 @@ describe('Dashboard Component', () => {
       { date: '2024-01-02', sessionCount: 5, totalTokens: 15000, avgScore: 90 },
     ];
     const mockModels = [
-      { modelId: 'model/gemini-pro', sessionCount: 8, avgTokens: 2800, avgScore: 92.5 },
-      { modelId: 'model/gpt-4', sessionCount: 2, avgTokens: 4000, avgScore: 88.0 },
+      {
+        modelId: 'model/gemini-pro',
+        sessionCount: 8,
+        avgTokens: 2800,
+        avgScore: 92.5,
+      },
+      {
+        modelId: 'model/gpt-4',
+        sessionCount: 2,
+        avgTokens: 4000,
+        avgScore: 88.0,
+      },
     ];
     useStatsMock.mockReturnValue({
       data: mockData,
@@ -116,12 +124,16 @@ describe('Dashboard Component', () => {
     render(<Dashboard />);
 
     // Assert
-    const totalSessionsCard = screen.getByText('Total Sessions').closest('div.bg-\\[var\\(--card-bg\\)\\]');
+    const totalSessionsCard = screen
+      .getByText('Total Sessions')
+      .closest('div.bg-\\[var\\(--card-bg\\)\\]');
     expect(totalSessionsCard).toHaveTextContent('0');
 
-    const totalTokensCard = screen.getByText('Total Tokens').closest('div.bg-\\[var\\(--card-bg\\)\\]');
+    const totalTokensCard = screen
+      .getByText('Total Tokens')
+      .closest('div.bg-\\[var\\(--card-bg\\)\\]');
     expect(totalTokensCard).toHaveTextContent('0');
-    
+
     expect(screen.getByText('No model data available.')).toBeInTheDocument();
   });
 });
