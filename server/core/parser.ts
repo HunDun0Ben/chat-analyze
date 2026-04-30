@@ -5,6 +5,7 @@ import { CoachService } from './services/CoachService.js';
 import { GeminiParser } from './parsers/GeminiParser.js';
 import { ChatGPTParser } from './parsers/ChatGPTParser.js';
 import { GeminiCheckpointParser } from './parsers/GeminiCheckpointParser.js';
+import { GeminiJsonlParser } from './parsers/GeminiJsonlParser.js';
 import { BaseParser } from './parsers/BaseParser.js';
 
 export class SessionParser {
@@ -12,12 +13,14 @@ export class SessionParser {
   private geminiParser: GeminiParser;
   private chatGPTParser: ChatGPTParser;
   private geminiCheckpointParser: GeminiCheckpointParser;
+  private geminiJsonlParser: GeminiJsonlParser;
 
   constructor() {
     this.coachService = new CoachService();
     this.geminiParser = new GeminiParser(this.coachService);
     this.chatGPTParser = new ChatGPTParser(this.coachService);
     this.geminiCheckpointParser = new GeminiCheckpointParser(this.coachService);
+    this.geminiJsonlParser = new GeminiJsonlParser(this.coachService);
   }
 
   /**
@@ -27,6 +30,14 @@ export class SessionParser {
   async analyze(
     filePath: string,
   ): Promise<AnalyzedSession | AnalyzedSession[]> {
+    const fileName = path.basename(filePath);
+
+    // If it's a .jsonl file, use the dedicated GeminiJsonlParser
+    if (fileName.endsWith('.jsonl')) {
+      return this.geminiJsonlParser.analyze(undefined, { filePath, fileName });
+    }
+
+    // For .json files, proceed with existing logic
     const rawData = await fs.readFile(filePath, 'utf-8');
     let sessionData: unknown;
     try {
@@ -38,8 +49,6 @@ export class SessionParser {
     if (!sessionData) {
       throw new Error('Invalid session data: Empty or null');
     }
-
-    const fileName = path.basename(filePath, '.json');
 
     // Support ChatGPT export arrays
     if (Array.isArray(sessionData)) {
