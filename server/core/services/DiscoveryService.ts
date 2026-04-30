@@ -31,7 +31,7 @@ export class DiscoveryService {
           .filter(
             (e) =>
               e.isFile() &&
-              e.name.endsWith('.json') &&
+              (e.name.endsWith('.json') || e.name.endsWith('.jsonl')) &&
               !this.isReservedConfig(e.name),
           )
           .filter((e) => !this.isIgnoredFile(e.name))
@@ -78,7 +78,10 @@ export class DiscoveryService {
         if (entry.isDirectory()) {
           if (this.isIgnoredDir(entry.name)) continue;
           await this.collectSessions(fullPath, files);
-        } else if (entry.isFile() && entry.name.endsWith('.json')) {
+        } else if (
+          entry.isFile() &&
+          (entry.name.endsWith('.json') || entry.name.endsWith('.jsonl'))
+        ) {
           if (
             this.isReservedConfig(entry.name) ||
             this.isIgnoredFile(entry.name)

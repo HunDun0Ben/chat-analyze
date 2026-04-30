@@ -9,11 +9,11 @@ export class ChatWatcher {
     private watchPaths: string[],
     private manager: SessionManager,
   ) {
-    // 监听所有路径下的所有 JSON 文件
+    // 监听所有路径下的所有 JSON 和 JSONL 文件
     // 使用通配符覆盖根目录和嵌套目录
     const patterns = watchPaths.flatMap((p) => [
-      `${p}/*.json`,
-      `${p}/**/*.json`,
+      `${p}/*.(json|jsonl)`,
+      `${p}/**/*.(json|jsonl)`,
     ]);
 
     this.watcher = chokidar.watch(patterns, {
