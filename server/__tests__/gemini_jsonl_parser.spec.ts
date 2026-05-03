@@ -19,7 +19,7 @@ describe('GeminiJsonlParser (Integration)', () => {
 
   it('should correctly parse a .jsonl session with metadata, messages, and $set updates', async () => {
     const filePath = path.join(tempDir, 'session-test.jsonl');
-    
+
     const lines = [
       // 1. Metadata
       JSON.stringify({
@@ -27,25 +27,25 @@ describe('GeminiJsonlParser (Integration)', () => {
         projectHash: 'hash-abc',
         startTime: '2026-04-29T10:00:00.000Z',
         lastUpdated: '2026-04-29T10:00:00.000Z',
-        kind: 'main'
+        kind: 'main',
       }),
       // 2. Info event
       JSON.stringify({
         id: 'msg-info',
         timestamp: '2026-04-29T10:00:01.000Z',
         type: 'info',
-        content: 'System started'
+        content: 'System started',
       }),
       // 3. User message
       JSON.stringify({
         id: 'msg-user-1',
         timestamp: '2026-04-29T10:01:00.000Z',
         type: 'user',
-        content: [{ text: 'How are you?' }]
+        content: [{ text: 'How are you?' }],
       }),
       // 4. $set update
       JSON.stringify({
-        $set: { lastUpdated: '2026-04-29T10:01:00.000Z' }
+        $set: { lastUpdated: '2026-04-29T10:01:00.000Z' },
       }),
       // 5. Gemini message
       JSON.stringify({
@@ -54,13 +54,15 @@ describe('GeminiJsonlParser (Integration)', () => {
         type: 'gemini',
         content: 'I am doing well, thank you!',
         model: 'gemini-2.0-flash',
-        thoughts: [{ subject: 'Greeting', description: 'User asked how I am.' }],
-        tokens: { input: 10, output: 20, total: 30, thoughts: 5, cached: 0 }
+        thoughts: [
+          { subject: 'Greeting', description: 'User asked how I am.' },
+        ],
+        tokens: { input: 10, output: 20, total: 30, thoughts: 5, cached: 0 },
       }),
       // 6. $set update
       JSON.stringify({
-        $set: { lastUpdated: '2026-04-29T10:01:10.000Z' }
-      })
+        $set: { lastUpdated: '2026-04-29T10:01:10.000Z' },
+      }),
     ];
 
     await fs.writeFile(filePath, lines.join('\n'));
@@ -95,13 +97,18 @@ describe('GeminiJsonlParser (Integration)', () => {
     const lines = [
       JSON.stringify({ sessionId: 'malformed-test' }),
       'invalid json here',
-      JSON.stringify({ id: 'msg-1', type: 'user', content: [{ text: 'Valid' }], timestamp: '...' })
+      JSON.stringify({
+        id: 'msg-1',
+        type: 'user',
+        content: [{ text: 'Valid' }],
+        timestamp: '...',
+      }),
     ];
     await fs.writeFile(filePath, lines.join('\n'));
 
     const result = await parser.analyze(filePath);
     if (Array.isArray(result)) throw new Error('Expected single session');
-    
+
     expect(result.sessionId).toBe('malformed-test');
     expect(result.messages.length).toBe(1);
     expect(result.messages[0].content).toBe('Valid');

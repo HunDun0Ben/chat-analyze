@@ -5,10 +5,12 @@
 系统已统一了不同 Provider（Gemini/ChatGPT）的数据接口。解析器会根据输入源（静态 JSON 或 JSONL 事件流）将其标准化为以下格式：
 
 ### 1.1 数据获取模式
+
 - **静态模式 (Static JSON)**: 一次性载入完整会话快照。
 - **流式/事件模式 (JSONL)**: 通过“事件回放”机制聚合。每一行代表一个原子事件（如消息发送、状态更新 `$set`），系统通过顺序解析这些事件，在内存中重构出完整的 `AnalyzedSession`。
 
 ### 1.2 标准化字段定义
+
 ```typescript
 export interface AnalyzedSession {
   sessionId: string; // 会话ID
