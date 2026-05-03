@@ -1,5 +1,5 @@
 {
-  "name": "ui",
+  "name": "@chat-analyze/ui",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,9 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "test": "playwright test",
+    "test:e2e": "playwright test",
     "test:ui": "vitest --ui",
-    "test:ci": "vitest run",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
