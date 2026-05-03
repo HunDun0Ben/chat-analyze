@@ -119,14 +119,14 @@ export function QuestionsView() {
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--app-bg)]">
+    <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[var(--app-bg)] text-[var(--text-main)]">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <MessageCircle className="w-6 h-6 text-blue-400" />
+          <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--text-main)]">
+            <MessageCircle className="h-6 w-6 text-blue-400" />
             My Questions
           </h1>
-          <p className="text-[var(--text-muted)] text-sm mt-1">
+          <p className="mt-1 text-sm text-[var(--text-muted)]">
             Browse and export your questioning history. Use filters to manage
             LLM context limits.
           </p>
@@ -139,9 +139,9 @@ export function QuestionsView() {
             disabled={filteredData.length === 0}
           >
             {copied ? (
-              <Check className="w-4 h-4" />
+              <Check className="h-4 w-4" />
             ) : (
-              <Copy className="w-4 h-4" />
+              <Copy className="h-4 w-4" />
             )}
             {copied ? 'Copied!' : 'Copy Current View'}
           </Button>
@@ -149,11 +149,11 @@ export function QuestionsView() {
       </header>
 
       {/* Stats Quick View */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.slice(0, 4).map((s) => (
           <Card
             key={s.projectName}
-            className={`cursor-pointer transition-all ${selectedProject === s.projectName ? 'border-blue-500 bg-blue-500/5' : 'border-[var(--border-color)] hover:border-blue-500/30'}`}
+            className={`cursor-pointer transition-all ${selectedProject === s.projectName ? 'border-blue-500 bg-blue-500/5' : 'border-[var(--card-border)] hover:border-blue-500/30'}`}
             onClick={() =>
               setSelectedProject(
                 selectedProject === s.projectName ? null : s.projectName,
@@ -161,15 +161,15 @@ export function QuestionsView() {
             }
           >
             <CardContent className="p-4">
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div className="space-y-1">
-                  <p className="text-[var(--text-muted)] text-[10px] uppercase tracking-wider font-bold">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[var(--text-muted)]">
                     {s.projectName}
                   </p>
-                  <p className="text-xl font-bold text-white">
+                  <p className="text-xl font-bold text-[var(--text-main)]">
                     {s.totalQuestions}
                   </p>
-                  <p className="text-[var(--text-muted)] text-[10px]">
+                  <p className="text-[10px] text-[var(--text-muted)]">
                     Questions across {s.sessionCount} sessions
                   </p>
                 </div>
@@ -190,25 +190,25 @@ export function QuestionsView() {
         ))}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4 bg-[var(--card-bg)] p-4 rounded-xl border border-[var(--border-color)]">
-        <div className="flex items-center gap-2 text-[var(--text-muted)] text-sm">
-          <Filter className="w-4 h-4" />
+      <div className="flex flex-wrap items-center gap-4 rounded-xl border border-[var(--card-border)] bg-[var(--card-bg)] p-4">
+        <div className="flex items-center gap-2 text-sm text-[var(--text-muted)]">
+          <Filter className="h-4 w-4" />
           <span>Filters:</span>
         </div>
 
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-muted)]" />
           <input
             type="text"
             placeholder="Search in questions..."
-            className="pl-10 pr-4 py-1.5 bg-[var(--app-bg)] border border-[var(--border-color)] rounded-lg text-xs focus:outline-none focus:border-blue-500 w-48"
+            className="w-48 rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] py-1.5 pl-10 pr-4 text-xs text-[var(--text-main)] outline-none focus:border-blue-500 focus:bg-[var(--input-focus)]"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
 
         <select
-          className="bg-[var(--app-bg)] border border-[var(--border-color)] rounded-lg text-xs px-3 py-1.5 text-white outline-none focus:border-blue-500"
+          className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-blue-500"
           value={selectedProject || ''}
           onChange={(e) => setSelectedProject(e.target.value || null)}
         >
@@ -221,7 +221,7 @@ export function QuestionsView() {
         </select>
 
         <select
-          className="bg-[var(--app-bg)] border border-[var(--border-color)] rounded-lg text-xs px-3 py-1.5 text-white outline-none focus:border-blue-500"
+          className="rounded-lg border border-[var(--card-border)] bg-[var(--input-bg)] px-3 py-1.5 text-xs text-[var(--text-main)] outline-none focus:border-blue-500"
           value={minScore}
           onChange={(e) => setMinScore(Number(e.target.value))}
         >
@@ -230,53 +230,53 @@ export function QuestionsView() {
           <option value="1">Problematic Only (&lt;80)</option>
         </select>
 
-        <div className="ml-auto text-[var(--text-muted)] text-xs">
+        <div className="ml-auto text-xs text-[var(--text-muted)]">
           Showing <strong>{filteredData.length}</strong> sessions
         </div>
       </div>
 
       <div className="grid gap-4">
         {filteredData.length === 0 ? (
-          <div className="text-center py-12 text-[var(--text-muted)]">
+          <div className="py-12 text-center text-[var(--text-muted)]">
             No questions found for the selected filters.
           </div>
         ) : (
           filteredData.map((session) => (
             <Card
               key={session.sessionId}
-              className="overflow-hidden border-[var(--border-color)]"
+              className="overflow-hidden border-[var(--card-border)]"
             >
               <CardHeader
-                className="cursor-pointer hover:bg-[var(--card-hover)] transition-colors py-3"
+                className="cursor-pointer py-3 transition-colors hover:bg-[var(--sidebar-hover)]"
                 onClick={() => toggleSession(session.sessionId)}
               >
-                <div className="flex items-center justify-between w-full">
-                  <div className="flex items-center gap-3 min-w-0">
+                <div className="flex w-full items-center justify-between">
+                  <div className="flex min-w-0 items-center gap-3">
                     {expandedSessions.has(session.sessionId) ? (
-                      <ChevronDown className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
+                      <ChevronDown className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-[var(--text-muted)] flex-shrink-0" />
+                      <ChevronRight className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
                     )}
                     <div className="min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white truncate">
+                        <span className="truncate font-semibold text-[var(--text-main)]">
                           {session.sessionTitle ||
                             session.questions[0]?.slice(0, 60) + '...'}
                         </span>
                         <Badge
                           variant="outline"
-                          className="text-[10px] py-0 h-5"
+                          className="h-5 py-0 text-[10px]"
                         >
                           {session.projectName}
                         </Badge>
                       </div>
-                      <div className="flex items-center gap-3 mt-0.5">
-                        <span className="text-[var(--text-muted)] text-[10px] flex items-center gap-1">
-                          <Calendar className="w-3 h-3" />
+                      <div className="mt-0.5 flex items-center gap-3">
+                        <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                          <Calendar className="h-3 w-3" />
                           {new Date(session.startTime).toLocaleString()}
                         </span>
-                        <span className="text-[var(--text-muted)] text-[10px] flex items-center gap-1">
-                          <BarChart3 className="w-3 h-3" />
+                        <span className="flex items-center gap-1 text-[10px] text-[var(--text-muted)]">
+                          <BarChart3 className="h-3 w-3" />
                           {session.questions.length} questions
                         </span>
                       </div>
@@ -284,22 +284,22 @@ export function QuestionsView() {
                   </div>
                   <Link
                     to={`/session/${session.sessionId}`}
-                    className="p-1 hover:bg-blue-500/10 rounded text-blue-400 transition-colors"
+                    className="rounded p-1 text-blue-400 transition-colors hover:bg-blue-500/10"
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <ExternalLink className="w-4 h-4" />
+                    <ExternalLink className="h-4 w-4" />
                   </Link>
                 </div>
               </CardHeader>
               {expandedSessions.has(session.sessionId) && (
-                <CardContent className="pt-0 pb-4 px-6 border-t border-[var(--border-color)]">
-                  <ul className="space-y-3 mt-4">
+                <CardContent className="border-t border-[var(--card-border)] px-6 pb-4 pt-0">
+                  <ul className="mt-4 space-y-3">
                     {session.questions.map((question, idx) => (
-                      <li key={idx} className="flex gap-3 group">
-                        <span className="text-[var(--text-muted)] font-mono text-xs mt-1">
+                      <li key={idx} className="group flex gap-3">
+                        <span className="mt-1 font-mono text-xs text-[var(--text-muted)]">
                           {(idx + 1).toString().padStart(2, '0')}
                         </span>
-                        <div className="bg-[var(--app-bg)] p-3 rounded-lg border border-[var(--border-color)] text-sm text-[var(--text-main)] group-hover:border-blue-500/30 transition-colors flex-1 whitespace-pre-wrap">
+                        <div className="flex-1 whitespace-pre-wrap rounded-lg border border-[var(--card-border)] bg-[var(--app-bg)] p-3 text-sm text-[var(--text-main)] transition-colors group-hover:border-blue-500/30">
                           {question}
                         </div>
                       </li>
