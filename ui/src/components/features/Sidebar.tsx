@@ -147,6 +147,23 @@ export function Sidebar() {
             className="w-full bg-[var(--input-bg)] border border-[var(--card-border)] rounded-xl py-2 pl-10 pr-4 text-xs text-[var(--text-main)] focus:outline-none focus:ring-1 focus:ring-blue-500/50 focus:bg-[var(--input-focus)] transition-all placeholder:text-[var(--text-dim)]"
           />
         </div>
+
+        <nav className="space-y-1">
+          <NavLink
+            to="/questions"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-3 px-3 py-2 rounded-lg text-xs font-medium transition-all',
+                isActive
+                  ? 'bg-blue-600/10 text-blue-400'
+                  : 'text-[var(--text-muted)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--text-main)]',
+              )
+            }
+          >
+            <MessageCircle size={14} />
+            <span>My Questions</span>
+          </NavLink>
+        </nav>
       </div>
 
       <Tabs

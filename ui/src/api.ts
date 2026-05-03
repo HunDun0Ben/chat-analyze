@@ -27,6 +27,28 @@ export const fetchStatsTimeline = () =>
 export const fetchModelStats = () =>
   fetch(`${API_BASE}/stats/models`).then((r) => r.json());
 
+export const fetchUserQuestions = (
+  params: {
+    project?: string;
+    limit?: number;
+    offset?: number;
+    minScore?: number;
+  } = {},
+) => {
+  const query = new URLSearchParams();
+  if (params.project) query.append('project', params.project);
+  if (params.limit) query.append('limit', params.limit.toString());
+  if (params.offset) query.append('offset', params.offset.toString());
+  if (params.minScore) query.append('minScore', params.minScore.toString());
+
+  return fetch(`${API_BASE}/user-questions?${query.toString()}`).then((r) =>
+    r.json(),
+  );
+};
+
+export const fetchUserQuestionsStats = () =>
+  fetch(`${API_BASE}/user-questions/stats`).then((r) => r.json());
+
 export const exportSkill = (id: string) =>
   fetch(`${API_BASE}/sessions/${id}/export-skill`, { method: 'POST' }).then(
     (r) => r.json(),

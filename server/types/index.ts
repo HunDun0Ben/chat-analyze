@@ -56,6 +56,14 @@ export interface SessionMessage {
   model?: string;
 }
 
+export interface UserQuestionsSession {
+  sessionId: string;
+  projectName: string;
+  sessionTitle?: string;
+  startTime: string;
+  questions: string[];
+}
+
 export interface MessageThought {
   subject: string;
   description: string;

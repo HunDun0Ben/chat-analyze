@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SessionManager } from '../core/manager.js';
+import { UserQuestionsSession } from '../types/index.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,9 +15,126 @@ export function startServer(manager: SessionManager) {
   app.use(cors());
   app.use(express.json());
 
-  // --- Session API ---
-  // ... (保持之前定义的 API 不变)
+  // --- User Questions API ---
+  app.get('/api/user-questions', async (req, res) => {
+    try {
+      const { project, category, minScore, maxScore, limit, offset } =
+        req.query;
+      let sessions = manager.getAllSessions();
 
+      // Apply filters
+      if (project) {
+        sessions = sessions.filter((s) => s.projectName === project);
+      }
+      if (category) {
+        sessions = sessions.filter((s) => s.category === category);
+      }
+      if (minScore) {
+        sessions = sessions.filter(
+          (s) => s.expressionQuality.score >= parseInt(minScore as string),
+        );
+      }
+      if (maxScore) {
+        sessions = sessions.filter(
+          (s) => s.expressionQuality.score <= parseInt(maxScore as string),
+        );
+      }
+
+      const userQuestions: UserQuestionsSession[] = sessions
+        .map((s) => ({
+          sessionId: s.sessionId,
+          projectName: s.projectName,
+          sessionTitle: s.sessionTitle,
+          startTime: s.startTime,
+          questions: s.messages
+            .filter((m) => m.type === 'user')
+            .map((m) => m.content),
+        }))
+        .filter((s) => s.questions.length > 0)
+        .sort(
+          (a, b) =>
+            new Date(b.startTime).getTime() - new Date(a.startTime).getTime(),
+        );
+
+      // Pagination
+      const start = parseInt(offset as string) || 0;
+      const count = parseInt(limit as string) || userQuestions.length;
+      const paginatedData = userQuestions.slice(start, start + count);
+
+      const isTextRequested =
+        req.headers.accept?.includes('text/plain') ||
+        req.query.format === 'text';
+
+      if (isTextRequested) {
+        const markdown = paginatedData
+          .map((s) => {
+            const title =
+              s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
+            return `### Session: ${title} (Project: ${s.projectName})\n${s.questions.map((q: string) => `- ${q}`).join('\n')}`;
+          })
+          .join('\n\n');
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        return res.send(markdown);
+      }
+
+      res.json({
+        total: userQuestions.length,
+        data: paginatedData,
+      });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  app.get('/api/user-questions/stats', async (req, res) => {
+    try {
+      const sessions = manager.getAllSessions();
+      const statsMap: Record<
+        string,
+        {
+          projectName: string;
+          sessionCount: number;
+          avgScore: number;
+          totalQuestions: number;
+          totalScore: number;
+        }
+      > = {};
+
+      sessions.forEach((s) => {
+        if (!statsMap[s.projectName]) {
+          statsMap[s.projectName] = {
+            projectName: s.projectName,
+            sessionCount: 0,
+            avgScore: 0,
+            totalQuestions: 0,
+            totalScore: 0,
+          };
+        }
+        const userQCount = s.messages.filter((m) => m.type === 'user').length;
+        if (userQCount > 0) {
+          statsMap[s.projectName].sessionCount++;
+          statsMap[s.projectName].totalQuestions += userQCount;
+          statsMap[s.projectName].totalScore += s.expressionQuality.score;
+        }
+      });
+
+      const result = Object.values(statsMap)
+        .filter((stat) => stat.sessionCount > 0)
+        .map((stat) => ({
+          projectName: stat.projectName,
+          sessionCount: stat.sessionCount,
+          totalQuestions: stat.totalQuestions,
+          avgScore: Math.round(stat.totalScore / stat.sessionCount),
+        }))
+        .sort((a, b) => b.totalQuestions - a.totalQuestions);
+
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // --- Session API ---
   app.get('/api/projects', async (req, res) => {
     try {
       const { provider } = req.query;

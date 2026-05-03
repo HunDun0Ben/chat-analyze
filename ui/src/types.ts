@@ -9,6 +9,14 @@ export interface SidebarSession {
   firstMessage?: string;
 }
 
+export interface UserQuestionsSession {
+  sessionId: string;
+  projectName: string;
+  sessionTitle?: string;
+  startTime: string;
+  questions: string[];
+}
+
 export interface SessionSummary {
   sessionId: string;
   projectName: string;
