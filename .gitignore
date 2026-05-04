@@ -25,6 +25,7 @@ Thumbs.db
 # Testing
 test-results/
 ui/test-results/
+ui/playwright-report/
 
 # Gemini Temporary
 .gemini/tmp/
