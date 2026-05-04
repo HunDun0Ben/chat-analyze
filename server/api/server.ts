@@ -67,33 +67,50 @@ export function startServer(manager: SessionManager) {
         req.query.format === 'prompt';
 
       if (isTextRequested) {
-        let markdown = paginatedData
+        if (
+          req.query.format === 'prompt' ||
+          req.query.includePrompt === 'true'
+        ) {
+          const promptHeader = `<instruction>
+      你是一位专业的软件工程沟通专家。下面是用户在项目 [${project || '所有项目'}] 中的连续提问记录。
+      请根据这些记录执行深度审计，识别用户在提问时的思维模型、逻辑断层以及表达精确度。
+
+      请严格按照以下结构输出你的分析报告：
+      # 提问模式审计报告
+      ## 1. 思维模型观察 (分析用户是如何理解技术问题的)
+      ## 2. 核心问题识别 (列出 3 个最影响沟通效率的缺陷，并引用具体提问作为证据)
+      ## 3. 针对性进化建议 (提供具体的提问模板或改进后的表达方式)
+      </instruction>
+
+      <conversation_data>
+      `;
+          const sessionsXml = paginatedData
+            .map((s) => {
+              const title =
+                s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
+              return `  <session id="${s.sessionId}" project="${s.projectName}" title="${title}">
+      <questions>
+      ${s.questions.map((q: string) => `      <q>${q.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</q>`).join('\n')}
+      </questions>
+      </session>`;
+            })
+            .join('\n');
+
+          const promptFooter = `
+      </conversation_data>
+
+      请根据上述数据开始你的专业审计。`;
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          return res.send(`${promptHeader}${sessionsXml}${promptFooter}`);
+        }
+
+        const markdown = paginatedData
           .map((s) => {
             const title =
               s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
             return `### Session: ${title} (Project: ${s.projectName})\n${s.questions.map((q: string) => `- ${q}`).join('\n')}`;
           })
           .join('\n\n');
-
-        if (
-          req.query.format === 'prompt' ||
-          req.query.includePrompt === 'true'
-        ) {
-          const promptHeader = `你是一位专业的软件工程沟通专家。下面是我在项目 [${project || '所有项目'}] 中的连续提问记录。
-请根据这些记录分析我在提问时的：
-1. 逻辑连贯性：是否有明显的思维跳跃或上下文断层？
-2. 表达精准度：是否提供了足够的背景信息，是否有模糊术语？
-3. 流程性问题：是否经常在某些环节卡住或重复提问？
-
-请针对性地给出 3 条可操作的改进建议。
-
---- 提问数据开始 ---
-`;
-          const promptFooter = `
---- 提问数据结束 ---
-请开始你的分析。`;
-          markdown = `${promptHeader}\n${markdown}${promptFooter}`;
-        }
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         return res.send(markdown);
