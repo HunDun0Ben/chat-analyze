@@ -63,16 +63,38 @@ export function startServer(manager: SessionManager) {
 
       const isTextRequested =
         req.headers.accept?.includes('text/plain') ||
-        req.query.format === 'text';
+        req.query.format === 'text' ||
+        req.query.format === 'prompt';
 
       if (isTextRequested) {
-        const markdown = paginatedData
+        let markdown = paginatedData
           .map((s) => {
             const title =
               s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
             return `### Session: ${title} (Project: ${s.projectName})\n${s.questions.map((q: string) => `- ${q}`).join('\n')}`;
           })
           .join('\n\n');
+
+        if (
+          req.query.format === 'prompt' ||
+          req.query.includePrompt === 'true'
+        ) {
+          const promptHeader = `你是一位专业的软件工程沟通专家。下面是我在项目 [${project || '所有项目'}] 中的连续提问记录。
+请根据这些记录分析我在提问时的：
+1. 逻辑连贯性：是否有明显的思维跳跃或上下文断层？
+2. 表达精准度：是否提供了足够的背景信息，是否有模糊术语？
+3. 流程性问题：是否经常在某些环节卡住或重复提问？
+
+请针对性地给出 3 条可操作的改进建议。
+
+--- 提问数据开始 ---
+`;
+          const promptFooter = `
+--- 提问数据结束 ---
+请开始你的分析。`;
+          markdown = `${promptHeader}\n${markdown}${promptFooter}`;
+        }
+
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
         return res.send(markdown);
       }
