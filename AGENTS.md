@@ -13,9 +13,9 @@
 
 ## Testing and Quality Mandates (Preflight)
 
-在提交 PR 或完成代码修改任务前，**必须执行 `npm run preflight` 命令**以确保没有引入回归或类型错误。
+在提交 PR 或完成代码修改任务前，**必须先执行 `npx prettier --write .` 进行代码格式化，然后再执行 `npm run preflight` 命令**，以确保没有引入格式错误、回归或类型错误。
 
-该命令会运行以下全量验证步骤：
+`npm run preflight` 会运行以下全量验证步骤：
 
 1. **Linting**: 代码风格检查
 2. **Type Check**: TypeScript 类型检查
