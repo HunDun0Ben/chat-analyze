@@ -48,7 +48,8 @@ export function startServer(manager: SessionManager) {
           startTime: s.startTime,
           questions: s.messages
             .filter((m) => m.type === 'user')
-            .map((m) => m.content),
+            .map((m) => m.content.trim())
+            .filter((q) => q.length > 0),
         }))
         .filter((s) => s.questions.length > 0)
         .sort(
