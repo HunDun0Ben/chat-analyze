@@ -14,6 +14,8 @@
 
 ### 2.1 获取提问列表
 
+### 2.1 获取提问列表
+
 - **Endpoint**: `GET /api/user-questions`
 - **Query Parameters**:
   - `project` (string): 项目名。
@@ -21,9 +23,31 @@
   - `maxScore` (number): 最大表达分。
   - `limit` (number): 分页限制。
   - `offset` (number): 分页偏移。
+  - `format` (string): `json` | `text` | `prompt`。
 - **Headers**:
   - `Accept: application/json`: 返回结构化 JSON。
   - `Accept: text/plain`: 返回格式化后的 Markdown。
+
+### 2.2 LLM-Native 模式 (`format=prompt`)
+
+当请求参数包含 `format=prompt` 时，后端会返回一个经过 XML 封装的完整 Prompt，包含：
+
+- **<instruction>**: 包含专家级审计指令和输出 Schema 约束。
+- **<conversation_data>**: 使用 XML 标签封装的会话数据。
+- **数据清洗**: 自动过滤所有空提问或仅包含空白字符的行，并剔除无有效提问的会话。
+
+## 3. 数据处理规范
+
+### 3.1 清洗逻辑
+
+在将数据投影为 `UserQuestionsSession` 之前，必须执行以下清洗：
+
+```typescript
+questions: s.messages
+  .filter((m) => m.type === 'user')
+  .map((m) => m.content.trim())
+  .filter((q) => q.length > 0);
+```
 
 ### 2.2 项目统计概览
 
