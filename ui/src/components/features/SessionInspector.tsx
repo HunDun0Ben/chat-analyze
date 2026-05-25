@@ -208,8 +208,20 @@ export function SessionInspector({
                           : 'bg-blue-500/5 border-blue-500/10 text-[var(--text-muted)] group-hover:bg-blue-500/10 group-hover:border-blue-500/30 group-hover:text-[var(--text-main)]',
                       )}
                     >
-                      {m.content?.substring(0, 60)}
-                      {m.content?.length > 60 ? '...' : ''}
+                      {m.content ? (
+                        <>
+                          {m.content.substring(0, 60)}
+                          {m.content.length > 60 ? '...' : ''}
+                        </>
+                      ) : (
+                        <span className="italic opacity-70">
+                          {m.thoughts && m.thoughts.length > 0
+                            ? '[ 思考过程 ]'
+                            : m.toolCalls && m.toolCalls.length > 0
+                              ? '[ 执行工具 ]'
+                              : '[ 空消息 ]'}
+                        </span>
+                      )}
                     </div>
                   </button>
                 ))}

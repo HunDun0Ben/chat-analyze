@@ -13,6 +13,8 @@ import {
   Lightbulb,
   PanelRightOpen,
   PanelRightClose,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -64,10 +66,12 @@ const MemoizedMessage = memo(
     m,
     sessionModelId,
     theme,
+    showInternals,
   }: {
     m: SessionMessage;
     sessionModelId: string;
     theme: string;
+    showInternals: boolean;
   }) => {
     return (
       <div
@@ -110,44 +114,46 @@ const MemoizedMessage = memo(
             </div>
           )}
 
-          <div
-            className={cn(
-              'prose prose-slate dark:prose-invert prose-sm max-w-none prose-pre:bg-black/5 dark:prose-pre:bg-black/40 prose-pre:border prose-pre:border-[var(--card-border)] prose-code:text-blue-500 prose-code:font-bold prose-hr:my-8 prose-hr:border-[var(--card-border)] leading-relaxed',
-              m.type === 'user'
-                ? 'text-[var(--user-text)]'
-                : 'text-[var(--text-main)]',
-            )}
-          >
-            <ReactMarkdown
-              children={(m.content as string) || ''}
-              components={{
-                hr() {
-                  return <hr className="my-12 border-[var(--card-border)]" />;
-                },
-                code({ children, className }) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  return match ? (
-                    <MemoizedCodeBlock
-                      language={match[1]}
-                      value={String(children).replace(/\n$/, '')}
-                      theme={theme}
-                    />
-                  ) : (
-                    <code
-                      className={cn(
-                        'bg-[var(--sidebar-hover)] px-1.5 py-0.5 rounded text-blue-500 font-mono font-bold border border-[var(--card-border)] mx-0.5 shadow-sm text-[0.85em]',
-                        className,
-                      )}
-                    >
-                      {String(children)}
-                    </code>
-                  );
-                },
-              }}
-            />
-          </div>
+          {!!m.content && (
+            <div
+              className={cn(
+                'prose prose-slate dark:prose-invert prose-sm max-w-none prose-pre:bg-black/5 dark:prose-pre:bg-black/40 prose-pre:border prose-pre:border-[var(--card-border)] prose-code:text-blue-500 prose-code:font-bold prose-hr:my-8 prose-hr:border-[var(--card-border)] leading-relaxed',
+                m.type === 'user'
+                  ? 'text-[var(--user-text)]'
+                  : 'text-[var(--text-main)]',
+              )}
+            >
+              <ReactMarkdown
+                children={(m.content as string) || ''}
+                components={{
+                  hr() {
+                    return <hr className="my-12 border-[var(--card-border)]" />;
+                  },
+                  code({ children, className }) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return match ? (
+                      <MemoizedCodeBlock
+                        language={match[1]}
+                        value={String(children).replace(/\n$/, '')}
+                        theme={theme}
+                      />
+                    ) : (
+                      <code
+                        className={cn(
+                          'bg-[var(--sidebar-hover)] px-1.5 py-0.5 rounded text-blue-500 font-mono font-bold border border-[var(--card-border)] mx-0.5 shadow-sm text-[0.85em]',
+                          className,
+                        )}
+                      >
+                        {String(children)}
+                      </code>
+                    );
+                  },
+                }}
+              />
+            </div>
+          )}
 
-          {m.type === 'gemini' && (
+          {m.type === 'gemini' && showInternals && (
             <>
               <ThoughtViewer thoughts={m.thoughts} />
               <ToolTimeline tools={m.toolCalls || []} />
@@ -159,6 +165,88 @@ const MemoizedMessage = memo(
   },
 );
 
+function mergeMessages(messages: SessionMessage[]): SessionMessage[] {
+  const processed: SessionMessage[] = [];
+  let pendingInternals: { thoughts: MessageThought[]; toolCalls: ToolCall[] } =
+    {
+      thoughts: [],
+      toolCalls: [],
+    };
+
+  for (const m of messages) {
+    if (m.type === 'gemini') {
+      if (!m.content) {
+        // Accumulate thoughts and tools
+        if (m.thoughts) pendingInternals.thoughts.push(...m.thoughts);
+        if (m.toolCalls) pendingInternals.toolCalls.push(...m.toolCalls);
+      } else {
+        // Has content, flush pending internals into this message
+        const newThoughts = m.thoughts
+          ? [...pendingInternals.thoughts, ...m.thoughts]
+          : pendingInternals.thoughts;
+        const newTools = m.toolCalls
+          ? [...pendingInternals.toolCalls, ...m.toolCalls]
+          : pendingInternals.toolCalls;
+
+        processed.push({
+          ...m,
+          thoughts: newThoughts.length > 0 ? newThoughts : undefined,
+          toolCalls: newTools.length > 0 ? newTools : undefined,
+        });
+        pendingInternals = { thoughts: [], toolCalls: [] }; // Reset
+      }
+    } else {
+      // If there were pending internals before a user/info message, flush them as a separate message
+      if (
+        pendingInternals.thoughts.length > 0 ||
+        pendingInternals.toolCalls.length > 0
+      ) {
+        processed.push({
+          id: `pending-${m.id}`,
+          type: 'gemini',
+          timestamp: new Date(
+            new Date(m.timestamp).getTime() - 1,
+          ).toISOString(),
+          content: '',
+          thoughts:
+            pendingInternals.thoughts.length > 0
+              ? pendingInternals.thoughts
+              : undefined,
+          toolCalls:
+            pendingInternals.toolCalls.length > 0
+              ? pendingInternals.toolCalls
+              : undefined,
+        });
+        pendingInternals = { thoughts: [], toolCalls: [] };
+      }
+      processed.push(m);
+    }
+  }
+
+  // Handle trailing pending internals (e.g. still thinking)
+  if (
+    pendingInternals.thoughts.length > 0 ||
+    pendingInternals.toolCalls.length > 0
+  ) {
+    processed.push({
+      id: `pending-final`,
+      type: 'gemini',
+      timestamp: new Date().toISOString(),
+      content: '',
+      thoughts:
+        pendingInternals.thoughts.length > 0
+          ? pendingInternals.thoughts
+          : undefined,
+      toolCalls:
+        pendingInternals.toolCalls.length > 0
+          ? pendingInternals.toolCalls
+          : undefined,
+    });
+  }
+
+  return processed;
+}
+
 export function SessionView() {
   const { theme } = useTheme();
   const { id } = useParams<{ id: string }>();
@@ -166,6 +254,7 @@ export function SessionView() {
   const [session, setSession] = useState<AnalyzedSession | null>(null);
   const [loading, setLoading] = useState(false);
   const [isInspectorCollapsed, setIsInspectorCollapsed] = useState(false);
+  const [showInternals, setShowInternals] = useState(false);
   const [prevId, setPrevId] = useState<string | undefined>(undefined);
 
   // Synchronously adjust state when id changes to avoid useEffect setState warning
@@ -180,7 +269,7 @@ export function SessionView() {
       fetchSessionDetail(id)
         .then((data) => {
           if (isMounted) {
-            setSession(data);
+            setSession({ ...data, messages: mergeMessages(data.messages) });
             setLoading(false);
           }
         })
@@ -225,9 +314,10 @@ export function SessionView() {
         m={m}
         sessionModelId={session.modelId}
         theme={theme}
+        showInternals={showInternals}
       />
     ));
-  }, [session, theme]);
+  }, [session, theme, showInternals]);
 
   if (loading)
     return (
@@ -264,6 +354,21 @@ export function SessionView() {
               {session.modelId}
             </span>
           </div>
+          <button
+            onClick={() => setShowInternals(!showInternals)}
+            className={cn(
+              'p-1.5 rounded-md transition-all border flex items-center gap-2 px-3',
+              showInternals
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-500'
+                : 'hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] border-transparent hover:border-[var(--card-border)]',
+            )}
+            title={showInternals ? 'Hide Thoughts' : 'Show Thoughts'}
+          >
+            {showInternals ? <EyeOff size={16} /> : <Eye size={16} />}
+            <span className="text-[10px] font-bold uppercase tracking-wider hidden sm:block">
+              {showInternals ? 'Hide Thoughts' : 'Show Thoughts'}
+            </span>
+          </button>
           <button
             onClick={() => setIsInspectorCollapsed(!isInspectorCollapsed)}
             className="p-1.5 rounded-md hover:bg-[var(--sidebar-hover)] text-[var(--text-muted)] hover:text-[var(--text-main)] transition-all border border-transparent hover:border-[var(--card-border)]"

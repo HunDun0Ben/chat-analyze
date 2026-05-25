@@ -43,6 +43,7 @@ export interface AnalyzedSession {
   };
 
   messages: SessionMessage[];
+  filePath?: string; // Add filePath to AnalyzedSession
 }
 
 export interface SessionMessage {
@@ -62,6 +63,7 @@ export interface UserQuestionsSession {
   sessionTitle?: string;
   startTime: string;
   questions: string[];
+  filePath?: string; // Add filePath to UserQuestionsSession
 }
 
 export interface MessageThought {

@@ -127,6 +127,7 @@ export class GeminiParser extends BaseParser {
         tokenUsage,
       },
       messages,
+      filePath, // Include filePath
     };
   }
 }

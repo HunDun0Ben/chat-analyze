@@ -159,6 +159,7 @@ export class GeminiCheckpointParser extends BaseParser {
         tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }, // Checkpoints don't usually include token info
       },
       messages,
+      filePath, // Include filePath
     };
   }
 

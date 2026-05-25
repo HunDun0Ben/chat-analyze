@@ -189,6 +189,7 @@ export class ChatGPTParser extends BaseParser {
         tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 },
       },
       messages: resultMessages,
+      filePath: options.filePath,
     };
 
     if (s.title && options.fileName && s.title !== options.fileName) {

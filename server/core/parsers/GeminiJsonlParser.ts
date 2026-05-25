@@ -248,6 +248,7 @@ export class GeminiJsonlParser extends BaseParser {
       suggestion: this.coachService.generateSuggestion(firstPrompt),
     };
     session.category = this.coachService.detectCategory(firstPrompt, toolChain);
+    session.filePath = filePath;
 
     return session as AnalyzedSession;
   }
