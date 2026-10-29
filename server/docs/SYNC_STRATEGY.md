@@ -6,17 +6,16 @@
 
 ## 2. 启动周期 (Boot Lifecycle)
 
-1.  **Scan Phase**: 遍历 `~/.gemini/tmp` 和其他 provider 路径。
-2.  **Resolve Phase**: 调用 `DiscoveryService` 确定所有文件的项目归属。
-3.  **Parallel Parse**: 启动 `SessionParser` 并发矩阵。
-    - **隔离性**: 某个文件损坏时，通过内部 `try-catch` 捕获，不中断整个 Boot 流程。
-4.  **Index Phase**:
+1.  **Scan Phase**: 遍历所有 `watchPaths`（Gemini、ChatGPT 等）。`DiscoveryService` 只负责发现候选文件，不判断 provider；忽略规则与 watcher 共用。
+2.  **Parse & Resolve Phase**: 启动 `SessionParser` 并发解析，由内容探测确定 `provider`；随后 `ProjectResolver` 按 provider 规则计算最终 `projectName`。
+    - **隔离性**: 单个文件损坏或入库失败时只记录日志，不中断整个 Boot 流程。
+3.  **Index Phase**:
     - 将结果存入内存 `Map`（核心 API 使用）。
     - 增量更新 SQLite 数据库（持久化检索使用）。
 
 ## 3. 实时性 (Real-time)
 
-- **Watcher**: 实时监控文件变动，仅重析变动的文件（Incremental Re-parsing）。
+- **Watcher**: 实时监控文件变动，仅重析变动的文件（Incremental Re-parsing）。watcher 与启动扫描共用忽略规则和 `ProjectResolver`，因此同一会话的项目名不会因加载方式而改变。
 - **Aggregation**: 所有聚合统计逻辑在内存中动态完成，避免 SQL 延迟。
 
 ## 4. 健壮性措施

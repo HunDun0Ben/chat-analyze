@@ -1,44 +1,83 @@
-# 🔍 Discovery Service 实现详解
+# 🔍 Discovery & Project Resolution
 
-## 1. 背景 (Context)
+## 1. Context
 
-由于 Gemini CLI 及其他工具的会话文件可能散落在文件系统的多个位置（例如 `~/.gemini/tmp/` 的各个子目录中），甚至项目结构本身也可能存在嵌套，我们需要一个强大的服务来自动化地发现这些会话文件，并准确地识别它们所属的项目。`DiscoveryService` 正是为此而生。
+Session files come from multiple providers (Gemini CLI, ChatGPT exports, and
+future tools) and can live in arbitrary directories. The system separates two
+concerns:
 
-## 2. 扫描策略 (`scan` Strategy)
+1. **Discovery** — find candidate session files under the configured watch
+   paths. This step is provider-agnostic.
+2. **Project resolution** — decide which project a parsed session belongs to.
+   This step is provider-specific.
 
-`DiscoveryService` 的入口是 `scan` 方法，它负责遍历一个或多个“监听路径” (`watchPaths`) 来查找会话文件。
+```
+watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectResolver
+                (files only)        (provider id)     (final projectName)
+```
 
-其主要扫描逻辑如下:
+`SessionManager` uses the same flow for both the boot scan (`init`) and the
+watcher (`upsertFromFile`), so a session's project name is identical no matter
+how it was loaded.
 
-1.  **遍历监听路径**: 按顺序处理传入的每一个 `watchPath`。
-2.  **处理根目录文件**: 查找直接位于 `watchPath` 根目录下的 `.json` 文件。这些文件通常是用户手动导入的，因此会被自动分配到名为 `Imported` 的特殊项目中。
-3.  **递归搜索子目录**:
-    - 遍历 `watchPath` 下的子目录（会跳过 `node_modules`, `.git` 等预设的忽略目录）。
-    - 对每个有效的项目目录，它会调用内部的 `collectSessions` 方法，递归地收集其中所有的 `.json` 会话文件。
-    - 收集到文件后，调用 `resolveProjectName` 方法为每个文件确定项目归属。
+## 2. Scan Strategy (`DiscoveryService.scan`)
 
-## 3. 项目名识别策略 (`resolveProjectName` Strategy)
+1. Iterate every configured `watchPath` in order.
+2. Collect session files:
+   - root-level files directly under the watch path;
+   - all files under non-ignored subdirectories (recursively).
+3. Only `.json` and `.jsonl` files are considered, and reserved configuration
+   files are skipped (see §4).
+4. Results are de-duplicated by absolute path (overlapping watch paths are
+   allowed) and sorted for deterministic output.
+5. A failure while reading one watch path or subdirectory is logged and does
+   not abort the remaining paths.
 
-`resolveProjectName` 是识别核心，它采用以下优先级来异步确定一个会话文件（`filePath`）究竟属于哪个项目：
+`DiscoveryResult` contains `filePath`, `watchRoot`, and a **generic**
+`projectName`. The generic name is only a fallback used by tooling; the final
+name is produced by `ProjectResolver` after parsing.
 
-1.  **向上查找标记文件 (Marker-based Resolution)**:
-    - 从会话文件所在的目录开始，**向上**逐层递归查找。
-    - 在每一层目录中，检查是否存在 `.project_root` 或 `projects.json` 这两个**标记文件**之一。
-    - 如果找到，则**包含该标记文件的目录名**就被视为 `Project Name`，查找结束。
-    - **注意**: 此处的 `projects.json` 仅作为存在性标记，服务本身不会读取其内容。
+## 3. Project Resolution (`ProjectResolver`)
 
-2.  **回退到相对路径 (Fallback to Relative Path)**:
-    - 如果向上查找未能找到任何标记文件，服务会回退到第二种策略。
-    - 它会计算文件相对于当前 `watchPath` 的路径。
-    - 通常，路径中的**第一个目录名**会被作为项目名。例如，对于 `.../watch_path/my-project/session.json`，项目名就是 `my-project`。
-    - **特殊情况**: 如果第一个目录名是 `chats`（例如 `.../chats/my-project/session.json`），系统会认为它是一个通用的容器目录，并会**取第二个目录名** (`my-project`) 作为项目名。
+Resolution only applies when the parser produced a placeholder name. Otherwise
+the parser-provided name (for example a name stored inside a Gemini session) is
+kept.
 
-3.  **最终回退 (Final Fallback)**:
-    - 如果以上策略都无法确定项目名（例如，文件直接位于 `watchPath` 下，但不符合任何规则），则项目名会被设为 `Imported`。
+| Provider  | Root-level file  | Nested file                                                                         | Markers                                                                                  |
+| --------- | ---------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `gemini`  | `Imported`       | first directory below the watch root; `chats/<project>/...` resolves to `<project>` | Walks upwards for `.project_root` or `projects.json`; the containing directory name wins |
+| `chatgpt` | `ChatGPT Import` | first directory below the watch root                                                | None                                                                                     |
+| unknown   | `Imported`       | first directory below the watch root                                                | None                                                                                     |
 
-## 4. 忽略的目录与文件 (Ignored Entries)
+Additional rules:
 
-为了提高效率和准确性，服务在扫描时会主动忽略一些常见的目录和配置文件：
+- The most specific (longest) watch root containing the file is used, so
+  `/data/end` does not match `/data/end2`.
+- A file outside every watch path resolves to `Unknown`.
+- Placeholder detection lives in `ProjectResolver.isPlaceholder` and is
+  provider-specific (for example Gemini's 64-character project hash).
 
-- **忽略目录**: `node_modules`, `.git`, `exports`, `dist`, `build`, `logs`, `community-plugins`。
-- **忽略的保留配置文件**: `package.json`, `package-lock.json`, `tsconfig.json`, `projects.json`, `vitest.config.ts`。这些文件不会被当作会话文件处理。
+## 4. Ignored Entries
+
+The ignore rules are defined once in
+`server/core/services/discovery/ignored.ts` and shared by `DiscoveryService`
+and `ChatWatcher`.
+
+- **Ignored directories**: `node_modules`, `.git`, `exports`, `dist`, `build`,
+  `logs`, `community-plugins`, `.obsidian`, `.trash`.
+- **Ignored files**: `package.json`, `package-lock.json`, `tsconfig.json`,
+  `projects.json`, `vitest.config.ts`, `community-plugins.json`.
+
+`.obsidian` and `.trash` are ignored because exported notes directories often
+contain configuration JSON that is not a session (and `.trash` may contain
+corrupted files).
+
+## 5. Extending a Provider
+
+1. Add a parser under `server/core/parsers/` and register it in
+   `SessionParser` (`server/core/parser.ts`).
+2. Add a naming function in
+   `server/core/services/discovery/projectNaming.ts`.
+3. Route the provider in `ProjectResolver.resolve` and add its placeholder rule
+   in `ProjectResolver.isPlaceholder`.
+4. Add tests for the parser, naming rules, and boot/watcher consistency.

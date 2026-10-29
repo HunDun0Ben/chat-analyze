@@ -1,6 +1,7 @@
 import { SessionParser } from './parser.js';
 import { SessionStorage } from '../db/storage.js';
 import { DiscoveryService } from './services/DiscoveryService.js';
+import { ProjectResolver } from './services/ProjectResolver.js';
 import { AnalyzedSession } from '../types/index.js';
 
 export class SessionManager {
@@ -9,17 +10,20 @@ export class SessionManager {
   private readonly parser: SessionParser;
   private readonly storage: SessionStorage;
   private readonly discoveryService: DiscoveryService;
+  private readonly projectResolver: ProjectResolver;
 
   constructor(
     watchPaths: string[],
     parser: SessionParser,
     storage: SessionStorage,
     discoveryService: DiscoveryService,
+    projectResolver: ProjectResolver,
   ) {
     this.watchPaths = watchPaths;
     this.parser = parser;
     this.storage = storage;
     this.discoveryService = discoveryService;
+    this.projectResolver = projectResolver;
   }
 
   /**
@@ -43,34 +47,31 @@ export class SessionManager {
 
     // 3. Parallel parsing with allSettled to ensure 100% resilience
     const parseResults = await Promise.allSettled(
-      discovered.map(
-        async (item: { filePath: string; projectName: string }) => {
-          const result = await this.parser.analyze(item.filePath);
-          const sessions = Array.isArray(result) ? result : [result];
+      discovered.map(async (item) => {
+        const result = await this.parser.analyze(item.filePath);
+        const sessions = Array.isArray(result) ? result : [result];
 
-          return sessions.map((session) => {
-            // Smart project naming fallback
-            if (
-              session.projectName === 'Imported' ||
-              session.projectName === 'Unknown' ||
-              session.projectName === 'ChatGPT Import' ||
-              /^[a-f0-9]{64}$/.test(session.projectName)
-            ) {
-              session.projectName = item.projectName;
-            }
-            return session;
-          });
-        },
-      ),
+        for (const session of sessions) {
+          await this.applyProjectName(session, item.filePath);
+        }
+
+        return sessions;
+      }),
     );
 
     // 4. Update memory and persistence
-    for (const result of parseResults) {
-      if (result.status === 'fulfilled' && result.value) {
-        for (const session of result.value) {
-          this.sessions.set(session.sessionId, session);
-          this.storage.saveSession(session);
-        }
+    for (const [index, result] of parseResults.entries()) {
+      if (result.status === 'rejected') {
+        console.error(
+          `[Manager] Failed to parse ${discovered[index].filePath}:`,
+          result.reason,
+        );
+        continue;
+      }
+
+      for (const session of result.value) {
+        this.sessions.set(session.sessionId, session);
+        this.persistSession(session);
       }
     }
 
@@ -136,10 +137,44 @@ export class SessionManager {
 
     // Update memory
     for (const s of sessions) {
+      await this.applyProjectName(s, filePath);
       this.sessions.set(s.sessionId, s);
-      this.storage.saveSession(s);
+      this.persistSession(s);
     }
 
     return session;
+  }
+
+  /**
+   * Apply the provider-specific project name when the parser produced a
+   * placeholder. Shared by init() and upsertFromFile() so the name never
+   * changes depending on how the session was loaded.
+   */
+  private async applyProjectName(
+    session: AnalyzedSession,
+    filePath: string,
+  ): Promise<void> {
+    if (
+      !this.projectResolver.isPlaceholder(session.provider, session.projectName)
+    ) {
+      return;
+    }
+
+    session.projectName = await this.projectResolver.resolve(
+      session.provider,
+      filePath,
+      this.watchPaths,
+    );
+  }
+
+  private persistSession(session: AnalyzedSession): void {
+    try {
+      this.storage.saveSession(session);
+    } catch (err) {
+      console.error(
+        `[Manager] Failed to persist session ${session.sessionId}:`,
+        err,
+      );
+    }
   }
 }

@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { SessionParser } from '../core/parser.js';
+import { ProjectResolver } from '../core/services/ProjectResolver.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
 describe('SessionParser (Spec)', () => {
   const parser = new SessionParser();
+  const projectResolver = new ProjectResolver();
   let tempDir: string;
 
   beforeEach(async () => {
@@ -21,12 +23,12 @@ describe('SessionParser (Spec)', () => {
     const projectDir = path.join(tempDir, 'my-cool-project', 'chats');
     await fs.mkdir(projectDir, { recursive: true });
 
+    const hash =
+      '5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f';
     const mockSession = {
       sessionId: 'test-session-123',
-      projectName:
-        '5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f',
-      projectHash:
-        '5115626aaecb2deb1d2108b6f2f0732be44e3296709a32362fc9457208251a6f',
+      projectName: hash,
+      projectHash: hash,
       startTime: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
       messages: [
@@ -46,7 +48,10 @@ describe('SessionParser (Spec)', () => {
 
     const result = await parser.analyze(filePath);
     if (Array.isArray(result)) throw new Error('Expected single session');
-    expect(result.projectName).toBe('my-cool-project');
+    expect(result.projectName).toBe(hash);
+    expect(await projectResolver.resolve('gemini', filePath, [tempDir])).toBe(
+      'my-cool-project',
+    );
   });
 
   it('Scenario 2: Normal Project Name in JSON', async () => {
@@ -74,12 +79,12 @@ describe('SessionParser (Spec)', () => {
     const simpleProjectDir = path.join(tempDir, 'simple-project');
     await fs.mkdir(simpleProjectDir, { recursive: true });
 
+    const hash =
+      '0000000000000000000000000000000000000000000000000000000000000000';
     const mockSession = {
       sessionId: 'test-session-3',
-      projectName:
-        '0000000000000000000000000000000000000000000000000000000000000000',
-      projectHash:
-        '0000000000000000000000000000000000000000000000000000000000000000',
+      projectName: hash,
+      projectHash: hash,
       startTime: new Date().toISOString(),
       lastUpdated: new Date().toISOString(),
       messages: [],
@@ -89,6 +94,9 @@ describe('SessionParser (Spec)', () => {
 
     const result = await parser.analyze(filePath);
     if (Array.isArray(result)) throw new Error('Expected single session');
-    expect(result.projectName).toBe('simple-project');
+    expect(result.projectName).toBe(hash);
+    expect(await projectResolver.resolve('gemini', filePath, [tempDir])).toBe(
+      'simple-project',
+    );
   });
 });

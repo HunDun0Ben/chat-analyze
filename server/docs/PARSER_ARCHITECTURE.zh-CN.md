@@ -38,10 +38,18 @@
      - 识别“交互事件”（如 `user`, `gemini` 类型）累加消息链。
   3. **最终组装**: 聚合所有事件后，进行二次计算（如 `stats` 和 `expressionQuality`）。
 
-## 4. 扩展指南
+## 4. 与 Discovery / ProjectResolver 的边界
+
+- `DiscoveryService` 只负责发现候选文件，**不判断** provider。
+- `SessionParser` 负责识别 provider 并完成解析。
+- `ProjectResolver` 在解析后按 provider 计算最终 `projectName`；启动扫描与 watcher 共用同一入口，保证名称一致。
+- 新增 provider 时，除解析器外，还需同步添加命名规则与占位名规则（见 `server/docs/DISCOVERY_SERVICE.zh-CN.md`）。
+
+## 5. 扩展指南
 
 若需支持新的 Provider 或格式，请遵循以下步骤：
 
 1. 在 `server/core/parsers/` 下继承 `BaseParser` 创建新解析器。
 2. 实现 `analyze` 逻辑，确保输出符合 `AnalyzedSession` 接口。
 3. 在 `server/core/parser.ts` 的 `SessionParser` 中注册该解析器的路由逻辑。
+4. 在 `server/core/services/ProjectResolver.ts` 中注册该 provider 的项目名解析规则。

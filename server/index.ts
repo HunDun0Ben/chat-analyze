@@ -6,6 +6,7 @@ import { SessionManager } from './core/manager.js';
 import { SessionParser } from './core/parser.js';
 import { SessionStorage } from './db/storage.js';
 import { DiscoveryService } from './core/services/DiscoveryService.js';
+import { ProjectResolver } from './core/services/ProjectResolver.js';
 import { ChatWatcher } from './core/watcher.js';
 
 /**
@@ -92,6 +93,7 @@ async function bootstrap() {
   const parser = new SessionParser();
   const storage = new SessionStorage();
   const discoveryService = new DiscoveryService();
+  const projectResolver = new ProjectResolver();
 
   // 3. 初始化 Session 管理器
   const manager = new SessionManager(
@@ -99,6 +101,7 @@ async function bootstrap() {
     parser,
     storage,
     discoveryService,
+    projectResolver,
   );
 
   // 启动时进行首次全量同步 (以目录为准)

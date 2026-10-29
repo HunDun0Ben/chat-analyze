@@ -1,44 +1,59 @@
-# 🔍 Discovery Service 实现详解 (Discovery Service Implementation Details)
+# 🔍 Discovery 与项目名解析 (Discovery & Project Resolution)
 
-## 1. 背景 (Context 背景)
+## 1. 背景 (Context)
 
-由于 Gemini CLI 及其他工具的会话文件可能散落在文件系统的多个位置（例如 `~/.gemini/tmp/` 的各个子目录中），甚至项目结构本身也可能存在嵌套，我们需要一个强大的服务来自动化地发现这些会话文件，并准确地识别它们所属的项目。`DiscoveryService` 正是为了此而生。
+会话文件可能来自多个 Provider（Gemini CLI、ChatGPT 导出，以及未来的工具），并且可能散落在任意目录。系统把职责拆成两层：
 
-## 2. 扫描策略 (`scan` Strategy 扫描策略)
+1. **发现 (Discovery)**：在配置的监听路径下查找候选会话文件。这一层**与 Provider 无关**。
+2. **项目名解析 (Project Resolution)**：为已解析的会话确定项目归属。这一层**与 Provider 相关**。
 
-`DiscoveryService` 的入口是 `scan` 方法，它负责遍历一个或多个“监听路径” (`watchPaths` 监控路径) 来查找会话文件。
+```
+watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectResolver
+                (只发现文件)        (识别 provider)    (最终 projectName)
+```
 
-其主要扫描逻辑如下:
+`SessionManager` 的启动全量扫描 (`init`) 与 watcher 的单文件更新 (`upsertFromFile`) 使用完全相同的流程，因此同一个会话无论通过哪种方式加载，项目名都一致。
 
-1.  **遍历监听路径**: 按顺序处理传入的每一个 `watchPath` (监控路径)。
-2.  **处理根目录文件**: 查找直接位于 `watchPath` 根目录下的 `.json` 文件。这些文件通常是用户手动导入的，因此会被自动分配到名为 `Imported` 的特殊项目中。
-3.  **递归搜索子目录**:
-    - 遍历 `watchPath` 下的子目录（会跳过 `node_modules`, `.git` 等预设的忽略目录）。
-    - 对每个有效的项目目录，它会调用内部的 `collectSessions` 方法，递归地收集其中所有的 `.json` 会话文件。
-    - 收集到文件后，调用 `resolveProjectName` 方法为每个文件确定项目归属。
+## 2. 扫描策略 (`DiscoveryService.scan`)
 
-## 3. 项目名识别策略 (`resolveProjectName` Strategy 项目名解析策略)
+1. 按顺序遍历每一个 `watchPath`。
+2. 收集会话文件：
+   - 直接位于监听根目录下的文件；
+   - 所有非忽略子目录中的文件（递归）。
+3. 只考虑 `.json` 与 `.jsonl`，并跳过保留配置文件（见 §4）。
+4. 结果按绝对路径去重（允许多个监听路径相互重叠），并排序以保证输出稳定。
+5. 某个监听路径或子目录读取失败时只记录日志，不会中断其余路径。
 
-`resolveProjectName` 是识别核心，它采用以下优先级来异步确定一个会话文件（`filePath` 文件路径）究竟属于哪个项目：
+`DiscoveryResult` 包含 `filePath`、`watchRoot` 和**通用** `projectName`。通用名称仅作为工具脚本的兜底；最终名称由解析后的 `ProjectResolver` 产生。
 
-1.  **向上查找标记文件 (Marker-based Resolution 基于标记的解析)**:
-    - 从会话文件所在的目录开始，**向上**逐层递归查找。
-    - 在每一层目录中，检查是否存在 `.project_root` 或 `projects.json` 这两个**标记文件**之一。
-    - 如果找到，则**包含该标记文件的目录名**就被视为 `Project Name` (项目名称)，查找结束。
-    - **注意**: 此处的 `projects.json` 仅作为存在性标记，服务本身不会读取其内容。
+## 3. 项目名解析 (`ProjectResolver`)
 
-2.  **回退到相对路径 (Fallback to Relative Path 回退到相对路径)**:
-    - 如果向上查找未能找到任何标记文件，服务会回退到第二种策略。
-    - 它会计算文件相对于当前 `watchPath` (监控路径) 的路径。
-    - 通常，路径中的**第一个目录名**会被作为项目名。例如，对于 `.../watch_path/my-project/session.json`，项目名就是 `my-project`。
-    - **特殊情况**: 如果第一个目录名是 `chats`（例如 `.../chats/my-project/session.json`），系统会认为它是一个通用的容器目录，并会**取第二个目录名** (`my-project`) 作为项目名。
+只有当解析器给出的是「占位名」时才会重新解析；否则保留解析器提供的名称（例如 Gemini 会话内部记录的项目名）。
 
-3.  **最终回退 (Final Fallback 最终回退)**:
-    - 如果以上策略都无法确定项目名（例如，文件直接位于 `watchPath` 下，但不符合任何规则），则项目名会被设为 `Imported` (已导入)。
+| Provider  | 根目录文件       | 嵌套文件                                                     | 标记文件                                                          |
+| --------- | ---------------- | ------------------------------------------------------------ | ----------------------------------------------------------------- |
+| `gemini`  | `Imported`       | 监听根下第一层目录；`chats/<project>/...` 解析为 `<project>` | 向上查找 `.project_root` 或 `projects.json`，包含标记的目录名优先 |
+| `chatgpt` | `ChatGPT Import` | 监听根下第一层目录                                           | 无                                                                |
+| 其他      | `Imported`       | 监听根下第一层目录                                           | 无                                                                |
 
-## 4. 忽略的目录与文件 (Ignored Entries 忽略条目)
+补充规则：
 
-为了提高效率和准确性，服务在扫描时会主动忽略一些常见的目录和配置文件：
+- 使用**最长匹配**的监听根，避免 `/data/end` 误匹配 `/data/end2`。
+- 不在任何监听路径内的文件解析为 `Unknown`。
+- 占位名判断位于 `ProjectResolver.isPlaceholder`，按 Provider 区分（例如 Gemini 的 64 位项目 hash）。
 
-- **忽略目录**: `node_modules`, `.git`, `exports`, `dist`, `build`, `logs`, `community-plugins`。
-- **忽略的保留配置文件**: `package.json`, `package-lock.json`, `tsconfig.json`, `projects.json`, `vitest.config.ts`。这些文件不会被当作会话文件处理。
+## 4. 忽略规则 (Ignored Entries)
+
+忽略规则统一定义在 `server/core/services/discovery/ignored.ts`，由 `DiscoveryService` 与 `ChatWatcher` 共用。
+
+- **忽略目录**：`node_modules`、`.git`、`exports`、`dist`、`build`、`logs`、`community-plugins`、`.obsidian`、`.trash`。
+- **忽略文件**：`package.json`、`package-lock.json`、`tsconfig.json`、`projects.json`、`vitest.config.ts`、`community-plugins.json`。
+
+忽略 `.obsidian` 与 `.trash` 是因为导出目录中常包含 Obsidian 配置文件，`.trash` 中还可能有损坏文件，它们都不是会话。
+
+## 5. 扩展新 Provider
+
+1. 在 `server/core/parsers/` 下新增解析器，并在 `SessionParser`（`server/core/parser.ts`）中注册路由。
+2. 在 `server/core/services/discovery/projectNaming.ts` 中新增命名函数。
+3. 在 `ProjectResolver.resolve` 中接入该 Provider，并在 `ProjectResolver.isPlaceholder` 中补充占位规则。
+4. 为解析器、命名规则以及「启动扫描 / watcher 一致性」补充测试。

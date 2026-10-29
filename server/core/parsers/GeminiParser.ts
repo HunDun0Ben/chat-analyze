@@ -1,4 +1,3 @@
-import path from 'node:path';
 import { AnalyzedSession, SessionMessage } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
 
@@ -86,19 +85,11 @@ export class GeminiParser extends BaseParser {
       messages,
     );
 
-    // Smart project naming: fallback to file path if name is a hash or missing
-    let projectName =
+    // Project naming from session content only. Path-based fallbacks are
+    // applied after parsing by ProjectResolver, so every provider uses the
+    // same resolution path.
+    const projectName =
       (s.projectName as string) || (s.projectHash as string) || 'Unknown';
-    if (/^[a-f0-9]{64}$/.test(projectName) || projectName === 'Unknown') {
-      const parts = filePath.split(path.sep);
-      const chatsIdx = parts.lastIndexOf('chats');
-      if (chatsIdx > 1) {
-        // Path: .../<ProjectName>/chats/session.json
-        projectName = parts[chatsIdx - 1];
-      } else if (parts.length >= 2) {
-        projectName = parts[parts.length - 2];
-      }
-    }
 
     return {
       sessionId: (s.sessionId as string) || '',

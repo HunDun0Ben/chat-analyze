@@ -5,6 +5,7 @@ import { SessionManager } from '../core/manager.js';
 import { SessionParser } from '../core/parser.js';
 import { SessionStorage } from '../db/storage.js';
 import { DiscoveryService } from '../core/services/DiscoveryService.js';
+import { ProjectResolver } from '../core/services/ProjectResolver.js';
 import path from 'node:path';
 import os from 'node:os';
 
@@ -13,11 +14,13 @@ async function verify() {
   const storage = new SessionStorage();
   const parser = new SessionParser();
   const discoveryService = new DiscoveryService();
+  const projectResolver = new ProjectResolver();
   const manager = new SessionManager(
     watchPath,
     parser,
     storage,
     discoveryService,
+    projectResolver,
   );
 
   console.log(`\n1. [Initialization] Scanning ${watchPath}...`);

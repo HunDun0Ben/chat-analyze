@@ -1,6 +1,7 @@
 import * as chokidar from 'chokidar';
 import path from 'node:path';
 import { SessionManager } from './manager.js';
+import { shouldIgnorePath } from './services/discovery/ignored.js';
 
 export class ChatWatcher {
   private watcher: chokidar.FSWatcher;
@@ -19,13 +20,8 @@ export class ChatWatcher {
     this.watcher = chokidar.watch(patterns, {
       persistent: true,
       ignoreInitial: true,
-      ignored: [
-        '**/node_modules/**',
-        '**/.git/**',
-        '**/package.json',
-        '**/package-lock.json',
-        '**/tsconfig.json',
-      ],
+      // Keep the ignore rules in sync with DiscoveryService.
+      ignored: (filePath: string) => shouldIgnorePath(filePath),
     });
   }
 
