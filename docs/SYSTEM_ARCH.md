@@ -2,7 +2,8 @@
 
 ## 1. 整体拓扑 (Top-level View)
 
-项目采用 **Filesystem-First (文件系统优先)** 架构，数据库作为二级索引缓存，确保数据的绝对实时性：
+项目采用 **Filesystem-First (文件系统优先)** 架构：磁盘文件是唯一事实来源，内存 `Map` 提供读模型。
+SQLite schema 与 `SessionStorage` 保留，但默认关闭写入（`PERSISTENCE=off`），需要时用 `PERSISTENCE=sqlite` 开启：
 
 `[Filesystem (~/.gemini/tmp)]` -> `[Server-Discovery]` -> `[Server-Parser Matrix]`
 `[Memory Map Aggregator]` -> `[REST API]` -> `[UI (Dashboard / Inspector)]`
@@ -26,7 +27,8 @@
 
 ## 3. 全局数据模型 (Shared Models)
 
-所有前后端共用的 TypeScript 接口定义均记录在 [DATA_STRUCTURE.md](docs/DATA_STRUCTURE.md)。
+前后端共用的类型与 API 响应 schema 位于 `shared/src/`（workspace 包 `@chat-analyze/shared`），
+两份副本已删除。字段说明见 [DATA_STRUCTURE.md](docs/DATA_STRUCTURE.md)。
 
 ## 4. 全局任务与进度 (Roadmap)
 

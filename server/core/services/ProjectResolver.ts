@@ -5,7 +5,7 @@ import {
   geminiProjectName,
 } from './discovery/projectNaming.js';
 
-export type ProviderId = AnalyzedSession['provider'];
+type ProviderId = AnalyzedSession['provider'];
 
 interface ProviderNaming {
   /** True when the parser could not derive a meaningful name from content. */
@@ -23,7 +23,7 @@ const CHATGPT_PLACEHOLDERS = new Set(['ChatGPT Import', 'Imported', 'Unknown']);
  * these rules; parsers only provide a placeholder. Adding a provider means
  * adding one entry here.
  */
-export const PROVIDER_NAMING: Record<ProviderId, ProviderNaming> = {
+const PROVIDER_NAMING: Record<ProviderId, ProviderNaming> = {
   gemini: {
     isPlaceholder: (projectName) =>
       !projectName ||

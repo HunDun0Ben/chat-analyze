@@ -4,6 +4,8 @@
 > **来源**:GitHub epic [#1](https://github.com/HunDun0Ben/chat-analyze/issues/1) 及其 30 个子 issue(#2–#31)。
 > **基线**:commit `2574112`,`server/` 测试基线 9 个文件 / 36 个用例全绿。
 > **生成时间**:2026-10-29。
+> **状态(2026-10-30)**:第 5 节的 10 个 PR 已全部合并,30 个子 issue 已关闭。
+> 本文保留为执行记录;若与代码冲突,以代码与 `docs/SYSTEM_ARCH.md` 为准。
 
 ---
 
@@ -23,7 +25,7 @@
 
 ### 1.1 项目
 
-- Monorepo(npm workspaces):`server/`(Node + TypeScript + Express + SQLite + chokidar)、`ui/`(React + Vite + Tailwind)、`docs/`。
+- Monorepo(npm workspaces):`shared/`(类型 + zod schema)、`server/`(Node + TypeScript + Express + SQLite + chokidar)、`ui/`(React + Vite + Tailwind)、`docs/`。
 - `server/` 的职责:扫描 Gemini / ChatGPT 的本地会话文件 → 解析为统一的 `AnalyzedSession` → 内存索引 → REST API 供 UI 与外部 agent 使用。
 - 架构原则:**Filesystem-First**,文件是唯一真相,DB 是缓存。
 

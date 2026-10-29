@@ -56,16 +56,13 @@ questions: s.messages
 
 ## 3. 前端实现细节
 
-### 3.1 类型定义 (`ui/src/types.ts`)
+### 3.1 类型定义 (`@chat-analyze/shared`)
+
+`UserQuestionsSession` 与 `ProjectStat` 由共享包 `shared/src/session.ts` / `shared/src/api.ts` 导出，
+前端只做 `import type`，不再维护本地副本：
 
 ```typescript
-export interface UserQuestionsSession {
-  sessionId: string;
-  projectName: string;
-  sessionTitle?: string;
-  startTime: string;
-  questions: string[];
-}
+import type { ProjectStat, UserQuestionsSession } from '@chat-analyze/shared';
 ```
 
 ### 3.2 复制导出逻辑

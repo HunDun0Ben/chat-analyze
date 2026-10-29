@@ -45,7 +45,7 @@ const tokenUsageSchema = z
   })
   .passthrough();
 
-export const geminiMessageSchema = z
+const geminiMessageSchema = z
   .object({
     id: z.string().optional(),
     timestamp: z.union([z.string(), z.number()]).optional(),
@@ -69,9 +69,6 @@ export const geminiSessionSchema = z
     messages: z.array(geminiMessageSchema),
   })
   .passthrough();
-
-export type GeminiSession = z.infer<typeof geminiSessionSchema>;
-export type GeminiMessage = z.infer<typeof geminiMessageSchema>;
 
 const checkpointPartSchema = z
   .object({
@@ -109,8 +106,6 @@ export const checkpointSchema = z
   })
   .passthrough();
 
-export type CheckpointData = z.infer<typeof checkpointSchema>;
-
 const chatGPTMessageSchema = z
   .object({
     id: z.string().optional(),
@@ -141,7 +136,6 @@ export const chatGPTExportSchema = z
   })
   .passthrough();
 
-export type ChatGPTExport = z.infer<typeof chatGPTExportSchema>;
 export type ChatGPTMessage = z.infer<typeof chatGPTMessageSchema>;
 
 /** `content` fragment of a JSONL user turn: plain string or `{ text }`. */
@@ -164,7 +158,7 @@ export const jsonlSetEventSchema = z
   .object({ $set: z.record(z.string(), z.unknown()) })
   .passthrough();
 
-export const jsonlUserTurnSchema = z
+const jsonlUserTurnSchema = z
   .object({
     id: z.string().optional(),
     timestamp: z.string().optional(),
@@ -173,7 +167,7 @@ export const jsonlUserTurnSchema = z
   })
   .passthrough();
 
-export const jsonlGeminiTurnSchema = z
+const jsonlGeminiTurnSchema = z
   .object({
     id: z.string().optional(),
     timestamp: z.string().optional(),
@@ -206,7 +200,7 @@ export const jsonlGeminiTurnSchema = z
   })
   .passthrough();
 
-export const jsonlInfoTurnSchema = z
+const jsonlInfoTurnSchema = z
   .object({
     id: z.string().optional(),
     timestamp: z.string().optional(),
@@ -220,6 +214,3 @@ export const jsonlRecordSchema = z.union([
   jsonlGeminiTurnSchema,
   jsonlInfoTurnSchema,
 ]);
-
-export type JsonlRecord = z.infer<typeof jsonlRecordSchema>;
-export type JsonlGeminiTurn = z.infer<typeof jsonlGeminiTurnSchema>;

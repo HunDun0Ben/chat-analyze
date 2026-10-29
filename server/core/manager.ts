@@ -134,11 +134,6 @@ export class SessionManager {
     return this.stats.summary(this.getAllSessions());
   }
 
-  async refresh(): Promise<AnalyzedSession[]> {
-    await this.init();
-    return this.getAllSessions();
-  }
-
   /**
    * Single file update/add (used by the watcher). Replaces whatever was
    * previously indexed for that path.

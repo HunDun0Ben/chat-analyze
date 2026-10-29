@@ -1,7 +1,7 @@
 import type { Server } from 'node:http';
 import { AppDeps, createApp } from '../app.js';
 
-export interface ListenOptions {
+interface ListenOptions {
   port: number;
   host: string;
 }

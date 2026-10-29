@@ -11,7 +11,7 @@ import { isRecord } from './shared/guards.js';
  *
  * Order matters: the first definition whose `canParse` matches wins.
  */
-export interface ParserRegistration {
+interface ParserRegistration {
   format: string;
   /** Probes the raw payload. Presence checks (not strict validation) keep
    * format-specific errors inside the parser, where they can name the field. */

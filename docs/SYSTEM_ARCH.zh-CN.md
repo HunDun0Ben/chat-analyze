@@ -2,7 +2,8 @@
 
 ## 1. 整体拓扑 (Top-level View 顶层视图)
 
-项目采用 **Filesystem-First (文件系统优先)** 架构，数据库作为二级索引缓存，确保数据的绝对实时性：
+项目采用 **Filesystem-First (文件系统优先)** 架构：磁盘文件是唯一事实来源，内存 `Map` 提供读模型。
+SQLite schema 与 `SessionStorage` 保留，但默认关闭写入（`PERSISTENCE=off`），需要时用 `PERSISTENCE=sqlite` 开启：
 
 `[Filesystem (~/.gemini/tmp)]` -> `[Server-Discovery 服务器发现服务]` -> `[Server-Parser Matrix 服务器解析器矩阵]`
 `[Memory Map Aggregator 内存映射聚合器]` -> `[REST API RESTful API接口]` -> `[UI (Dashboard 仪表盘 / Inspector 检查器)]`
@@ -14,7 +15,7 @@
 由 `server/` 提供核心分析引擎。详细实现文档见 `server/docs/`：
 
 - [Discovery Service 实现](server/docs/DISCOVERY_SERVICE.md): 物理文件检索与项目归属算法。
-- [Parser Architecture 解析器架构](server/docs/PARSER_ARCHITECTURE.zh-CN.md): 插件化解析矩阵与事件聚合设计。
+- [Parser Architecture 解析器架构](server/docs/PARSER_ARCHITECTURE.zh-CN.md): 注册表路由与事件聚合设计。
 - [Sync & Cache Strategy 同步与缓存策略](server/docs/SYNC_STRATEGY.md): 高并发同步与内存聚合策略。
 - [Coach Scoring Logic 教练评分逻辑](server/docs/COACH_LOGIC.md): 详细评分权重与审计维度。
 
@@ -27,7 +28,8 @@
 
 ## 3. 全局数据模型 (Shared Models 共享模型)
 
-所有前后端共用的 TypeScript 接口定义均记录在 [DATA_STRUCTURE.md](docs/DATA_STRUCTURE.md)。
+前后端共用的类型与 API 响应 schema 位于 `shared/src/`（workspace 包 `@chat-analyze/shared`），
+原先的两份类型副本已删除。字段说明见 [DATA_STRUCTURE.md](docs/DATA_STRUCTURE.md)。
 
 ## 4. 全局任务与进度 (Roadmap 路线图)
 

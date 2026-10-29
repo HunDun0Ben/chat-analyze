@@ -4,7 +4,7 @@ import path from 'node:path';
  * Directories that never contain session files.
  * Shared by DiscoveryService and ChatWatcher to keep both in sync.
  */
-export const IGNORED_DIRS = [
+const IGNORED_DIRS = [
   'node_modules',
   '.git',
   'exports',
@@ -20,7 +20,7 @@ export const IGNORED_DIRS = [
  * Reserved configuration files that match the session file extensions
  * but must never be parsed as sessions.
  */
-export const IGNORED_FILES = [
+const IGNORED_FILES = [
   'package.json',
   'package-lock.json',
   'tsconfig.json',

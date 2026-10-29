@@ -1,25 +1,47 @@
-# ⚡ 同步策略与实时性保障 (Synchronization Strategy and Real-time Guarantee)
+# ⚡ 同步策略与实时性保障 (Synchronization Strategy)
 
-## 1. 架构演进 (Architecture Evolution)
+## 1. 架构 (Architecture)
 
-系统从 **“数据库驱动 (DB-Driven)”** 演进为 **“文件系统优先 (FS-First)”** 模式。
+系统是 **文件系统优先 (FS-First)**：磁盘上的会话文件是唯一事实来源，内存 `Map` 是读模型。
 
-## 2. 启动周期 (Boot Lifecycle 启动生命周期)
+SQLite 的 schema 与 `SessionStorage` 实现**保留**，但默认关闭写入：
 
-1.  **Scan Phase (扫描阶段)**: 遍历所有 `watchPaths`（Gemini、ChatGPT 等），支持 `.json` 和 `.jsonl` (JSON Lines)。`DiscoveryService` (发现服务) 只发现候选文件，不判断 provider；忽略规则与 watcher 共用。
-2.  **Parse & Resolve Phase (解析与归属阶段)**: 启动 `SessionParser` (会话解析器) 并发矩阵，由内容探测确定 `provider`；随后 `ProjectResolver` 按 provider 规则计算最终 `projectName`。
-    - **多格式支持**: 自动根据文件扩展名路由至静态解析器或事件流解析器。
-    - **隔离性**: 单个文件损坏或入库失败时只记录日志，不中断整个 Boot (启动) 流程。
-3.  **Index Phase (索引阶段)**:
-    - 将结果存入内存 `Map` (核心 API 使用)。
-    - 增量更新 SQLite 数据库（持久化检索使用）。
+- `PERSISTENCE=off`（默认）：进程不打开数据库文件，不产生任何写入
+- `PERSISTENCE=sqlite`：恢复写入，调用方无需改动
+- 跨重启的增量缓存尚未实现，当前只有进程内增量
 
-## 3. 实时性 (Real-time 实时性)
+## 2. 启动周期 (Boot Lifecycle)
 
-- **Watcher (监视器)**: 使用 `chokidar` 实时监控文件变动（包含 `*.json` / `*.jsonl`），仅重析变动的文件（Incremental Re-parsing 增量重新解析）。watcher 与启动扫描共用忽略规则和 `ProjectResolver`，因此同一会话的项目名不会因加载方式而改变。
-- **Aggregation (聚合)**: 所有聚合统计逻辑在内存中动态完成，避免 SQL 延迟。
+1. **Scan Phase (扫描阶段)**：遍历所有 `watchPaths`。`DiscoveryService` 只发现候选文件（`.json` / `.jsonl`），不判断 provider；忽略规则与 watcher 共用。
+2. **Parse Phase (解析阶段)**：`SessionAnalyzer`（`server/core/parsing/SessionAnalyzer.ts`）并发解析，上限 `MAX_CONCURRENT_PARSES = 8`。
+   - 格式通过 `core/parsing/registry.ts` 的 `PARSER_REGISTRATIONS` 探测；`.jsonl` 固定走事件流解析器。
+   - 单个文件损坏只产生 `ParseWarning`，不中断整个启动流程。
+3. **Resolve Phase (归属阶段)**：`SessionManager` 对占位项目名调用 `ProjectResolver`，启动扫描与 watcher 共用同一入口。
+4. **Index Phase (索引阶段)**：结果写入内存 `Map`，并维护 `filePath → sessionIds` 索引。默认**不写数据库**。
 
-## 4. 健壮性措施 (Robustness Measures)
+## 3. 实时性 (Real-time)
 
-- 启动时自动删除由于旧版本架构产生的脏 DB (`chat_analyze.db`)。
-- 自动识别并标记 `provider` 字段。
+- **Watcher (监视器)**：`chokidar` 监控 `*.json` / `*.jsonl`
+  - `add` / `change` → `manager.upsertFromFile()`（按文件替换旧会话）
+  - `unlink` → `manager.removeByPath()`（内存、指纹、启用时的数据库同步清理）
+- **增量 (Incremental)**：进程内用 `(mtimeMs, size)` 指纹跳过未变化文件；首次启动仍会解析全部文件。
+- **Aggregation (聚合)**：所有统计在内存中由 `StatsService` 完成，没有 SQL 延迟。
+
+## 4. 关闭 (Shutdown)
+
+`SIGINT` / `SIGTERM` 触发统一关闭流程（`server/lifecycle.ts`）：
+
+```
+watcher.stop() → http server.close() → storage.close()（仅 PERSISTENCE=sqlite）
+```
+
+- 任一步失败仍继续关闭后续组件，最终以 1 退出
+- 10 秒未完成则记录日志并强制退出
+- 多次信号幂等
+
+## 5. 健壮性措施 (Robustness)
+
+- **不会删除**用户已有的数据库文件；旧的 `chat_analyze.db` 可以保留不动。
+- 单文件解析失败只记录 warning，不影响其他文件。
+- 解析结果保持确定性：缺少时间戳时回退到文件 `mtime`，消息 id 使用稳定哈希，而不是 `Date.now()`。
+- 删除文件后不会再留下幽灵会话。

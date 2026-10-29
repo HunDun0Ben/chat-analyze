@@ -4,12 +4,11 @@ import type {
   ProjectStat,
   Provider,
   SessionIndexEntry,
-  StatsSummary,
   StatsTimelinePoint,
   UserQuestionsResponse,
 } from '@chat-analyze/shared';
 
-export const API_BASE = 'http://localhost:3001/api';
+const API_BASE = 'http://localhost:3001/api';
 
 /** Narrow `fetch(...).json()` (typed `any`) once, at the network boundary. */
 async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -37,9 +36,6 @@ export const fetchSessionsSummary = (): Promise<SessionIndexEntry[]> =>
 
 export const fetchSessionDetail = (id: string): Promise<AnalyzedSession> =>
   getJson(`${API_BASE}/sessions/${id}`);
-
-export const fetchStatsSummary = (): Promise<StatsSummary> =>
-  getJson(`${API_BASE}/stats/summary`);
 
 export const fetchStatsTimeline = (): Promise<StatsTimelinePoint[]> =>
   getJson(`${API_BASE}/stats/timeline`);

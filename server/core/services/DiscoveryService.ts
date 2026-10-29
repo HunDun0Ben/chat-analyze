@@ -6,7 +6,7 @@ import {
   isSessionFileName,
 } from './discovery/ignored.js';
 
-export interface DiscoveryResult {
+interface DiscoveryResult {
   filePath: string;
   watchRoot: string;
 }
