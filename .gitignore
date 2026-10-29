@@ -30,3 +30,6 @@ ui/playwright-report/
 # Gemini Temporary
 .gemini/tmp/
 .env.back
+
+# Generated export artifacts (created by export-skill)
+exports/
