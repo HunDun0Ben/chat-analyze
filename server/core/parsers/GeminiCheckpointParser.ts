@@ -118,6 +118,7 @@ export class GeminiCheckpointParser extends BaseParser {
         {
           sessionId,
           projectName,
+          projectNameIsPlaceholder: false,
           sessionTitle,
           isCheckpoint: true,
           projectHash: '', // Not available in checkpoints

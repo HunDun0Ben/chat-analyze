@@ -75,7 +75,7 @@ describe('SessionManager project naming', () => {
       ),
       JSON.stringify({
         sessionId: 'gemini-marked',
-        projectName: 'Unknown',
+        projectName: '',
         startTime: '2024-03-25T00:00:00.000Z',
         lastUpdated: '2024-03-25T00:00:00.000Z',
         messages: [

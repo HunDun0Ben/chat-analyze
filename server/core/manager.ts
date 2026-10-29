@@ -175,11 +175,11 @@ export class SessionManager {
     session: AnalyzedSession,
     filePath: string,
   ): Promise<void> {
-    if (
-      !this.projectResolver.isPlaceholder(session.provider, session.projectName)
-    ) {
-      return;
-    }
+    const needsResolution =
+      session.projectNameIsPlaceholder ??
+      this.projectResolver.isPlaceholder(session.provider, session.projectName);
+
+    if (!needsResolution) return;
 
     session.projectName = await this.projectResolver.resolve(
       session.provider,

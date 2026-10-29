@@ -88,13 +88,20 @@ export class GeminiParser extends BaseParser {
     // Project naming from session content only. Path-based fallbacks are
     // applied after parsing by ProjectResolver, so every provider uses the
     // same resolution path.
-    const projectName = s.projectName || s.projectHash || 'Unknown';
+    const contentProjectName = s.projectName?.trim() ?? '';
+    // Only content-free or hash-only names are placeholders. A payload that
+    // literally says "Unknown" is treated as an intentional project name.
+    const projectNameIsPlaceholder =
+      contentProjectName.length === 0 ||
+      /^[a-f0-9]{64}$/.test(contentProjectName);
+    const projectName = contentProjectName || s.projectHash || 'Unknown';
 
     return {
       sessions: [
         {
           sessionId: resolveSessionId(s, filePath),
           projectName,
+          projectNameIsPlaceholder,
           sessionTitle: firstPrompt.substring(0, 50),
           projectHash: s.projectHash ?? '',
           modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'unknown',
