@@ -3,6 +3,7 @@ import cors from 'cors';
 import fs from 'node:fs';
 import path from 'node:path';
 import { AnalyzedSession, UserQuestionsSession } from './types/index.js';
+import type { SessionIndexEntry, StatsSummary } from '@chat-analyze/shared';
 import {
   buildSessionXmlElement,
   formatSessionTitle,
@@ -31,7 +32,7 @@ export interface SessionManagerLike {
   getSession(sessionId: string): AnalyzedSession | null;
   getProjects(provider?: 'gemini' | 'chatgpt'): string[];
   getSessionsByProject(projectName: string): AnalyzedSession[];
-  getStats(): { total: number; avgScore: number; totalTokens: number };
+  getStats(): StatsSummary;
 }
 
 export interface AppDeps {
@@ -390,7 +391,7 @@ Do not explore the codebase. Work only with the session index, session files, an
   app.get('/api/sessions/summary', async (req, res) => {
     const sessions = manager.getAllSessions();
     // 返回精简版，用于搜索和侧边栏显示
-    const summary = sessions.map((s) => ({
+    const summary: SessionIndexEntry[] = sessions.map((s) => ({
       sessionId: s.sessionId,
       sessionTitle: s.sessionTitle,
       projectName: s.projectName,

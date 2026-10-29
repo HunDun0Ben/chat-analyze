@@ -20,7 +20,9 @@ function session(overrides: Partial<AnalyzedSession> = {}): AnalyzedSession {
     },
     stats: {
       turns: 4,
+      totalMessages: 4,
       userTurns: 2,
+      assistantTurns: 2,
       geminiTurns: 2,
       corrections: 0,
       toolChain: [],
@@ -44,7 +46,9 @@ function emptySession(
     },
     stats: {
       turns: 0,
+      totalMessages: 0,
       userTurns: 0,
+      assistantTurns: 0,
       geminiTurns: 0,
       corrections: 0,
       toolChain: [],
@@ -121,8 +125,8 @@ describe('StatsService.timeline', () => {
     ]);
 
     expect(result).toEqual([
-      { date: '2026-01-01', avgScore: 80 },
-      { date: '2026-01-02', avgScore: 70 },
+      { date: '2026-01-01', avgScore: 80, sessionCount: 2, totalTokens: 100 },
+      { date: '2026-01-02', avgScore: 70, sessionCount: 2, totalTokens: 200 },
     ]);
   });
 });

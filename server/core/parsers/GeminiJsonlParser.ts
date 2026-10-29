@@ -3,6 +3,7 @@ import {
   SessionMessage,
   ToolCall,
 } from '../../types/index.js';
+import { turnStats } from '@chat-analyze/shared';
 import { BaseParser } from './BaseParser.js';
 import { CoachService } from '../services/CoachService.js';
 import { ParserOutput, ParseWarning } from '../parsing/result.js';
@@ -35,8 +36,6 @@ export class GeminiJsonlParser extends BaseParser {
     const warnings: ParseWarning[] = [];
 
     const messages: SessionMessage[] = [];
-    let userTurns = 0;
-    let geminiTurns = 0;
     let projectHash = '';
     let startTime = fallbackTimestamp;
     let lastUpdated = fallbackTimestamp;
@@ -119,7 +118,12 @@ export class GeminiJsonlParser extends BaseParser {
       const msg: SessionMessage = {
         id: record.id || stableMessageId(filePath, lineNumber),
         timestamp: record.timestamp || fallbackTimestamp,
-        type: record.type,
+        type:
+          record.type === 'user'
+            ? 'user'
+            : record.type === 'gemini'
+              ? 'assistant'
+              : 'info',
         content: '',
       };
 
@@ -127,11 +131,9 @@ export class GeminiJsonlParser extends BaseParser {
         msg.content = (record.content ?? [])
           .map((part) => (typeof part === 'string' ? part : (part.text ?? '')))
           .join('\n');
-        userTurns++;
       } else if (record.type === 'gemini') {
         msg.content = record.content ?? '';
         msg.model = record.model;
-        geminiTurns++;
 
         if (record.thoughts && record.thoughts.length > 0) {
           msg.thoughts = record.thoughts.map((thought) => ({
@@ -178,9 +180,10 @@ export class GeminiJsonlParser extends BaseParser {
       );
     }
 
-    const geminiMsgs = messages.filter((m) => m.type === 'gemini');
-    if (geminiMsgs.length > 0) {
-      modelId = geminiMsgs[geminiMsgs.length - 1].model || 'unknown';
+    const counts = turnStats(messages);
+    const assistantMsgs = messages.filter((m) => m.type === 'assistant');
+    if (assistantMsgs.length > 0) {
+      modelId = assistantMsgs[assistantMsgs.length - 1].model || 'unknown';
     }
 
     const firstUserMessage = messages.find((m) => m.type === 'user');
@@ -207,7 +210,7 @@ export class GeminiJsonlParser extends BaseParser {
       startTime,
       lastUpdated,
       expressionQuality: {
-        scoreable: userTurns > 0,
+        scoreable: counts.userTurns > 0,
         score: this.coachService.calculateQualityScore(
           correctionCount,
           firstPrompt,
@@ -216,9 +219,11 @@ export class GeminiJsonlParser extends BaseParser {
         suggestion: this.coachService.generateSuggestion(firstPrompt),
       },
       stats: {
-        turns: messages.length, // includes info messages, unlike the JSON parser
-        userTurns,
-        geminiTurns,
+        turns: counts.turns,
+        totalMessages: counts.totalMessages,
+        userTurns: counts.userTurns,
+        assistantTurns: counts.assistantTurns,
+        geminiTurns: counts.assistantTurns,
         corrections: correctionCount,
         toolChain,
         tokenUsage,

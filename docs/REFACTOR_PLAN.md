@@ -408,10 +408,12 @@ Agent-B: PR-2 (core/parsers、core/services/discovery、core/manager)
 
 - `server/types/index.ts`:`type: 'user' | 'assistant' | 'system' | 'info'`
 - 三个 parser 的映射同步;`geminiTurns` → `assistantTurns`,保留一个版本的 `@deprecated` 别名
-- `turns = userTurns + assistantTurns`,三处统一调用 `shared/stats.ts`
-- 新增 `shared/` workspace 包(纯类型 + zod schema),`server` 与 `ui` 都从它导入
-- 删除 `ui/src/types.ts` 中重复定义;`/api/stats/timeline` 的返回类型与前端声明对齐(补 `sessionCount`/`totalTokens` 或修正声明)
+- `turns = userTurns + assistantTurns`,三处统一调用 `shared/src/stats.ts` 的 `turnStats()`
+- 新增 `shared/` workspace 包(`@chat-analyze/shared`,纯类型 + zod schema),`server` 与 `ui` 都从它导入
+- 删除 `ui/src/types.ts` 中重复定义;**决策**:`/api/stats/timeline` 选择"补字段",现在返回 `sessionCount` / `totalTokens`,
+  Dashboard 的总会话数与总 token 卡片因此不再恒为 0
 - UI 中 `type === 'gemini'` 的判断改为 `type === 'assistant'`
+- 共享包构建产物 (`shared/dist`) 不提交;`prepare` + 根脚本的 `build:shared` 保证 `npm ci` / `preflight` 顺序正确
 
 **测试**
 

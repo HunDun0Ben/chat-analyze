@@ -23,6 +23,7 @@ test.describe('Chat Analyze Frontend', () => {
             provider: 'gemini',
             startTime: new Date().toISOString(),
             expressionQuality: { score: 95 },
+            firstMessage: 'Hello',
           },
         ]),
       });
@@ -64,7 +65,7 @@ test.describe('Chat Analyze Frontend', () => {
             },
             {
               id: '2',
-              type: 'gemini',
+              type: 'assistant',
               content: 'Hi there!',
               timestamp: new Date().toISOString(),
               model: 'gemini-1.5-pro',
@@ -73,11 +74,13 @@ test.describe('Chat Analyze Frontend', () => {
           modelId: 'gemini-1.5-pro',
           stats: {
             turns: 2,
+            totalMessages: 2,
             userTurns: 1,
+            assistantTurns: 1,
             geminiTurns: 1,
             corrections: 0,
             toolChain: [],
-            tokenUsage: { total: 100 },
+            tokenUsage: { input: 50, output: 50, thoughts: 0, total: 100 },
           },
           expressionQuality: {
             score: 95,

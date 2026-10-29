@@ -12,18 +12,11 @@ import {
   Calendar,
 } from 'lucide-react';
 import { fetchUserQuestions, fetchUserQuestionsStats } from '../api';
-import type { UserQuestionsSession } from '../types';
+import type { ProjectStat, UserQuestionsSession } from '@chat-analyze/shared';
 import { Card, CardContent, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
 import { Link } from 'react-router-dom';
-
-interface ProjectStat {
-  projectName: string;
-  sessionCount: number;
-  totalQuestions: number;
-  avgScore: number;
-}
 
 export function QuestionsView() {
   const [data, setData] = useState<UserQuestionsSession[]>([]);

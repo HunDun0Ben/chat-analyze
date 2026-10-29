@@ -1,4 +1,5 @@
 import { SessionMessage, ToolCall } from '../../types/index.js';
+import { turnStats } from '@chat-analyze/shared';
 import { BaseParser } from './BaseParser.js';
 import { ParserOutput } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
@@ -26,7 +27,12 @@ export class GeminiCheckpointParser extends BaseParser {
 
     const messages: SessionMessage[] = parsed.data.history.map(
       (h, index: number) => {
-        const type = h.role === 'model' ? 'gemini' : 'user';
+        const type =
+          h.role === 'user'
+            ? 'user'
+            : h.role === 'model' || h.role === 'assistant'
+              ? 'assistant'
+              : 'info';
 
         const msg: SessionMessage = {
           id: `msg-${index}`,
@@ -84,7 +90,7 @@ export class GeminiCheckpointParser extends BaseParser {
     );
 
     const userMsgs = messages.filter((m) => m.type === 'user');
-    const geminiMsgs = messages.filter((m) => m.type === 'gemini');
+    const counts = turnStats(messages);
 
     const toolChain = messages
       .flatMap((m) => m.toolCalls || [])
@@ -137,9 +143,11 @@ export class GeminiCheckpointParser extends BaseParser {
             suggestion: this.coachService.generateSuggestion(firstPrompt),
           },
           stats: {
-            turns: userMsgs.length + geminiMsgs.length,
-            userTurns: userMsgs.length,
-            geminiTurns: geminiMsgs.length,
+            turns: counts.turns,
+            totalMessages: counts.totalMessages,
+            userTurns: counts.userTurns,
+            assistantTurns: counts.assistantTurns,
+            geminiTurns: counts.assistantTurns,
             corrections: correctionCount,
             toolChain,
             tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }, // Checkpoints don't usually include token info

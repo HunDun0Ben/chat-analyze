@@ -3,6 +3,7 @@ import {
   SessionMessage,
   ToolCall,
 } from '../../types/index.js';
+import { turnStats } from '@chat-analyze/shared';
 import { BaseParser } from './BaseParser.js';
 import { ParserOutput } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
@@ -83,7 +84,7 @@ export class ChatGPTParser extends BaseParser {
           pendingAssistantMsg = {
             id: m.id ?? '',
             timestamp,
-            type: 'gemini', // Using 'gemini' type for assistant consistency in UI
+            type: 'assistant',
             content: '',
             model: modelSlug || 'chatgpt',
             thoughts: currentThoughts,
@@ -161,7 +162,8 @@ export class ChatGPTParser extends BaseParser {
     }
 
     const userMsgs = resultMessages.filter((m) => m.type === 'user');
-    const geminiMsgs = resultMessages.filter((m) => m.type === 'gemini');
+    const assistantMsgs = resultMessages.filter((m) => m.type === 'assistant');
+    const counts = turnStats(resultMessages);
     const firstPrompt = userMsgs[0]?.content || '';
 
     const toolChain = resultMessages
@@ -179,7 +181,7 @@ export class ChatGPTParser extends BaseParser {
       projectNameIsPlaceholder: true,
       sessionTitle: fileName || s.title || 'ChatGPT Chat',
       projectHash: 'chatgpt-import',
-      modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'chatgpt',
+      modelId: assistantMsgs[assistantMsgs.length - 1]?.model || 'chatgpt',
       category: this.coachService.detectCategory(firstPrompt, toolChain),
       provider: 'chatgpt',
       startTime:
@@ -200,9 +202,11 @@ export class ChatGPTParser extends BaseParser {
         suggestion: this.coachService.generateSuggestion(firstPrompt),
       },
       stats: {
-        turns: resultMessages.length,
-        userTurns: userMsgs.length,
-        geminiTurns: geminiMsgs.length,
+        turns: counts.turns,
+        totalMessages: counts.totalMessages,
+        userTurns: counts.userTurns,
+        assistantTurns: counts.assistantTurns,
+        geminiTurns: counts.assistantTurns,
         corrections: correctionCount,
         toolChain,
         tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 },

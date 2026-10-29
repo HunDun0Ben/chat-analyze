@@ -28,7 +28,7 @@ import type {
   ToolCall,
   MessageThought,
   SessionMessage,
-} from '../types';
+} from '@chat-analyze/shared';
 import { SessionInspector } from '../components/features/SessionInspector';
 import { cn } from '../utils';
 import { Badge } from '../components/ui/Badge';
@@ -100,8 +100,10 @@ const MemoizedMessage = memo(
                 ) : (
                   <Sparkles size={11} className="text-blue-500" />
                 )}
-                <span className={cn(m.type === 'gemini' && 'text-blue-500/80')}>
-                  {m.type === 'gemini' ? sessionModelId : 'User'}
+                <span
+                  className={cn(m.type === 'assistant' && 'text-blue-500/80')}
+                >
+                  {m.type === 'assistant' ? sessionModelId : 'User'}
                 </span>
               </div>
               <div className="flex items-center gap-2 text-[var(--text-dim)] font-mono">
@@ -153,7 +155,7 @@ const MemoizedMessage = memo(
             </div>
           )}
 
-          {m.type === 'gemini' && showInternals && (
+          {m.type === 'assistant' && showInternals && (
             <>
               <ThoughtViewer thoughts={m.thoughts} />
               <ToolTimeline tools={m.toolCalls || []} />
@@ -174,7 +176,7 @@ function mergeMessages(messages: SessionMessage[]): SessionMessage[] {
     };
 
   for (const m of messages) {
-    if (m.type === 'gemini') {
+    if (m.type === 'assistant') {
       if (!m.content) {
         // Accumulate thoughts and tools
         if (m.thoughts) pendingInternals.thoughts.push(...m.thoughts);
@@ -203,7 +205,7 @@ function mergeMessages(messages: SessionMessage[]): SessionMessage[] {
       ) {
         processed.push({
           id: `pending-${m.id}`,
-          type: 'gemini',
+          type: 'assistant',
           timestamp: new Date(
             new Date(m.timestamp).getTime() - 1,
           ).toISOString(),
@@ -230,7 +232,7 @@ function mergeMessages(messages: SessionMessage[]): SessionMessage[] {
   ) {
     processed.push({
       id: `pending-final`,
-      type: 'gemini',
+      type: 'assistant',
       timestamp: new Date().toISOString(),
       content: '',
       thoughts:

@@ -1,8 +1,11 @@
-# 📊 数据结构与分析模型设计 - v1.2 (2026-03-25)
+# 📊 数据结构与分析模型设计 - v1.3 (2026-10-30)
 
 ## 1. 核心模型 (Analyzed Session 分析会话)
 
-系统已统一了不同 Provider（Gemini/ChatGPT）的数据接口。解析器会根据输入源（静态 JSON 或 JSONL 事件流）将其标准化为以下格式：
+系统已统一了不同 Provider（Gemini/ChatGPT）的数据接口。解析器会根据输入源（静态 JSON 或 JSONL 事件流）将其标准化为以下格式。
+
+> 唯一的类型定义位于 `shared/src/session.ts`（workspace 包 `@chat-analyze/shared`），
+> `server/` 与 `ui/` 都从该包导入，不再各自维护副本。
 
 ### 1.1 数据获取模式
 
@@ -24,18 +27,21 @@ export interface AnalyzedSession {
   // 表达质量分析 (Coach 模块)
   expressionQuality: {
     score: number; // 0-100 综合评分
+    scoreable?: boolean; // 无用户提问时为 false，所有均分都会排除该会话
     ambiguities: string[]; // 识别出的模糊词汇
     suggestion: string; // 针对性改进建议
   };
 
   // 消息内容 (标准化)
-  messages: Message[]; // 包含 User/Gemini/System/Tool/Thought 消息类型
+  messages: Message[]; // type: 'user' | 'assistant' | 'system' | 'info'
 
   // 效率统计 (Stats 统计)
   stats: {
-    turns: number; // 总轮数
+    turns: number; // = userTurns + assistantTurns（不含 system/info）
+    totalMessages: number; // 全部消息数（含 system/info）
     userTurns: number; // 用户输入轮数
-    geminiTurns: number; // 模型回复轮数
+    assistantTurns: number; // 模型回复轮数（所有 Provider 统一）
+    geminiTurns?: number; // @deprecated 保留一个版本，等于 assistantTurns
     corrections: number; // 纠错次数 (通过关键词与状态码识别)
     toolChain: string[]; // 工具链顺序轨迹 (仅 Gemini 支持)
     tokenUsage: {

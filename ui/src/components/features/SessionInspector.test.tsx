@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { SessionInspector } from './SessionInspector';
 import * as useSessionHook from '../../features/session/useSession';
-import type { AnalyzedSession } from '../../types';
+import type { AnalyzedSession } from '@chat-analyze/shared';
 
 // Mock the useSessionExport hook
 vi.mock('../../features/session/useSession', () => ({
@@ -28,9 +28,12 @@ const mockSession: AnalyzedSession = {
   category: 'Coding',
   stats: {
     turns: 10,
+    totalMessages: 10,
+    userTurns: 5,
+    assistantTurns: 5,
     corrections: 0,
     toolChain: [],
-    tokenUsage: { total: 500, input: 300, output: 200 },
+    tokenUsage: { total: 500, input: 300, output: 200, thoughts: 0 },
   },
   messages: [
     {
@@ -41,7 +44,7 @@ const mockSession: AnalyzedSession = {
     },
     {
       id: 'msg-2',
-      type: 'gemini',
+      type: 'assistant',
       content: 'Hi there!',
       timestamp: new Date(Date.now() - 90000).toISOString(),
     },

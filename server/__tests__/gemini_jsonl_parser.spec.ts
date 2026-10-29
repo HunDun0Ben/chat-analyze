@@ -82,7 +82,7 @@ describe('GeminiJsonlParser (Integration)', () => {
     expect(session.messages[0].type).toBe('info');
     expect(session.messages[1].type).toBe('user');
     expect(session.messages[1].content).toBe('How are you?');
-    expect(session.messages[2].type).toBe('gemini');
+    expect(session.messages[2].type).toBe('assistant');
     expect(session.messages[2].model).toBe('gemini-2.0-flash');
     expect(session.messages[2].thoughts?.length).toBe(1);
 
