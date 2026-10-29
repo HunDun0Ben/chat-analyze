@@ -1,14 +1,13 @@
-import * as fs from 'node:fs';
-import * as readline from 'node:readline';
-import crypto from 'node:crypto';
 import {
   AnalyzedSession,
   SessionMessage,
   ToolCall,
 } from '../../types/index.js';
-import { BaseParser, ParserOptions } from './BaseParser.js';
+import { BaseParser } from './BaseParser.js';
 import { CoachService } from '../services/CoachService.js';
-import { resolveSessionId } from '../parsing/shared/ids.js';
+import { ParserOutput, ParseWarning } from '../parsing/result.js';
+import { SessionSource } from '../parsing/source.js';
+import { resolveSessionId, stableMessageId } from '../parsing/shared/ids.js';
 
 interface RawSessionMetadata {
   sessionId?: string;
@@ -89,11 +88,12 @@ export class GeminiJsonlParser extends BaseParser {
     super(coachService);
   }
 
-  async analyze(
-    sessionData: unknown, // This will be the filePath in this parser
-    options: ParserOptions,
-  ): Promise<AnalyzedSession> {
-    const { filePath } = options;
+  async parse(source: SessionSource): Promise<ParserOutput> {
+    const { filePath } = source;
+    // No metadata timestamps in a bare JSONL: fall back to the file mtime so
+    // repeated parses of the same file are byte-for-byte identical.
+    const fallbackTimestamp = new Date(source.stat.mtimeMs).toISOString();
+    const warnings: ParseWarning[] = [];
     const session: Partial<AnalyzedSession> = {
       sessionId: 'unknown',
       projectName: 'Imported', // Default
@@ -102,8 +102,8 @@ export class GeminiJsonlParser extends BaseParser {
       modelId: 'unknown',
       category: undefined,
       provider: 'gemini',
-      startTime: new Date().toISOString(),
-      lastUpdated: new Date().toISOString(),
+      startTime: fallbackTimestamp,
+      lastUpdated: fallbackTimestamp,
       expressionQuality: {
         score: 0,
         ambiguities: [],
@@ -126,18 +126,14 @@ export class GeminiJsonlParser extends BaseParser {
     const toolChain: string[] = [];
     const tokenUsage = { input: 0, output: 0, thoughts: 0, total: 0 };
 
-    const fileStream = fs.createReadStream(filePath);
-    const rl = readline.createInterface({
-      input: fileStream,
-      crlfDelay: Infinity,
-    });
-
     let isFirstLine = true;
+    let lineNumber = 0;
     let metadataSessionId: string | undefined;
     let ignoredSetKeys = 0;
     let explicitTitle: string | undefined;
 
-    for await (const line of rl) {
+    for await (const line of source.lines()) {
+      lineNumber++;
       if (line.trim().length === 0) continue;
 
       try {
@@ -177,8 +173,8 @@ export class GeminiJsonlParser extends BaseParser {
             | RawInfoEvent;
 
           const msg: SessionMessage = {
-            id: rawMessage.id || crypto.randomBytes(16).toString('hex'),
-            timestamp: rawMessage.timestamp,
+            id: rawMessage.id || stableMessageId(filePath, lineNumber),
+            timestamp: rawMessage.timestamp || fallbackTimestamp,
             type: rawMessage.type,
             content: '',
           };
@@ -235,13 +231,14 @@ export class GeminiJsonlParser extends BaseParser {
           messages.push(msg);
         }
       } catch (e) {
-        console.error(`[GeminiJsonlParser] Error parsing line: ${line}`, e);
-        // Decide whether to throw or continue. For robustness, we'll continue for now.
+        if (warnings.length < 100) {
+          warnings.push({
+            filePath,
+            reason: `line ${lineNumber}: ${(e as Error).message}`,
+          });
+        }
       }
     }
-
-    rl.close();
-    fileStream.close();
 
     session.sessionId = resolveSessionId(
       { sessionId: metadataSessionId },
@@ -294,6 +291,6 @@ export class GeminiJsonlParser extends BaseParser {
     session.category = this.coachService.detectCategory(firstPrompt, toolChain);
     session.filePath = filePath;
 
-    return session as AnalyzedSession;
+    return { sessions: [session as AnalyzedSession], warnings };
   }
 }

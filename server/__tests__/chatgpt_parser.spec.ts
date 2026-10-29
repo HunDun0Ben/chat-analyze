@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
-describe('SessionParser (ChatGPT Unification)', () => {
-  const parser = new SessionParser();
+describe('SessionAnalyzer (ChatGPT Unification)', () => {
+  const parser = new SessionAnalyzer();
 
   it('should unify fragmented ChatGPT nodes into a single structured message', async () => {
     const tempDir = path.join(
@@ -88,12 +88,12 @@ describe('SessionParser (ChatGPT Unification)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockChatGPT));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
     // Verify aggregation
-    expect(result.messages.length).toBe(2); // One user, one assistant (unified)
+    expect(session.messages.length).toBe(2); // One user, one assistant (unified)
 
-    const assistantMsg = result.messages[1];
+    const assistantMsg = session.messages[1];
     expect(assistantMsg.type).toBe('gemini');
     expect(assistantMsg.content).toContain('Here is what I found');
 
@@ -163,12 +163,12 @@ describe('SessionParser (ChatGPT Unification)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockChatGPT));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
-    expect(result.messages.length).toBe(3);
-    expect(result.messages[0].type).toBe('user');
-    expect(result.messages[1].type).toBe('gemini');
-    expect(result.messages[2].type).toBe('user');
+    expect(session.messages.length).toBe(3);
+    expect(session.messages[0].type).toBe('user');
+    expect(session.messages[1].type).toBe('gemini');
+    expect(session.messages[2].type).toBe('user');
 
     await fs.rm(tempDir, { recursive: true, force: true });
   });

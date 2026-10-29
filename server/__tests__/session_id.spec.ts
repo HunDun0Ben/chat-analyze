@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import { SessionManager } from '../core/manager.js';
 import { SessionStorage } from '../db/storage.js';
 import { DiscoveryService } from '../core/services/DiscoveryService.js';
@@ -49,7 +49,7 @@ describe('session id resolution', () => {
 
     const manager = new SessionManager(
       [tempDir],
-      new SessionParser(),
+      new SessionAnalyzer(),
       new SessionStorage(':memory:'),
       new DiscoveryService(),
       new ProjectResolver(),
@@ -75,15 +75,12 @@ describe('session id resolution', () => {
       }),
     );
 
-    const parser = new SessionParser();
+    const parser = new SessionAnalyzer();
     const first = await parser.analyze(filePath);
     const second = await parser.analyze(filePath);
-    if (Array.isArray(first) || Array.isArray(second)) {
-      throw new Error('Expected single session');
-    }
 
-    expect(first.sessionId).toBe(second.sessionId);
-    expect(first.sessionId).toBe(stableSessionId(filePath));
+    expect(first.sessions[0].sessionId).toBe(second.sessions[0].sessionId);
+    expect(first.sessions[0].sessionId).toBe(stableSessionId(filePath));
   });
 
   it('falls back to the conversation id of a ChatGPT export entry', async () => {
@@ -117,9 +114,8 @@ describe('session id resolution', () => {
       }),
     );
 
-    const result = await new SessionParser().analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const result = await new SessionAnalyzer().analyze(filePath);
 
-    expect(result.sessionId).toBe('conv-42');
+    expect(result.sessions[0].sessionId).toBe('conv-42');
   });
 });

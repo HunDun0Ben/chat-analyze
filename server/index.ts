@@ -2,7 +2,7 @@ import { loadConfig } from './config/index.js';
 import { logResolvedConfig } from './config/log.js';
 import { startServer } from './api/server.js';
 import { SessionManager } from './core/manager.js';
-import { SessionParser } from './core/parser.js';
+import { SessionAnalyzer } from './core/parsing/SessionAnalyzer.js';
 import { SessionStorage } from './db/storage.js';
 import { DiscoveryService } from './core/services/DiscoveryService.js';
 import { ProjectResolver } from './core/services/ProjectResolver.js';
@@ -15,7 +15,7 @@ async function bootstrap(): Promise<void> {
   // Filesystem is the source of truth: index first, then watch for changes.
   const manager = new SessionManager(
     config.watchPaths,
-    new SessionParser(),
+    new SessionAnalyzer(),
     new SessionStorage(config.dbPath),
     new DiscoveryService(),
     new ProjectResolver(),

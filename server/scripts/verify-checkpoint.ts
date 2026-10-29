@@ -1,8 +1,8 @@
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import path from 'node:path';
 
 async function main() {
-  const parser = new SessionParser();
+  const parser = new SessionAnalyzer();
   const filePath =
     '/home/ben/.gemini/tmp/redis/checkpoint-%22redis%20base%20dir%22.json';
 
@@ -10,7 +10,7 @@ async function main() {
 
   try {
     const result = await parser.analyze(filePath);
-    const sessions = Array.isArray(result) ? result : [result];
+    const sessions = result.sessions;
 
     sessions.forEach((s) => {
       console.log('--- Result ---');

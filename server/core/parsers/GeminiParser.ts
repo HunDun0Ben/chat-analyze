@@ -1,14 +1,15 @@
-import { AnalyzedSession, SessionMessage } from '../../types/index.js';
-import { BaseParser, ParserOptions } from './BaseParser.js';
-import { resolveSessionId } from '../parsing/shared/ids.js';
+import { SessionMessage } from '../../types/index.js';
+import { BaseParser } from './BaseParser.js';
+import { ParserOutput } from '../parsing/result.js';
+import { SessionSource } from '../parsing/source.js';
+import { extractContent } from '../parsing/shared/content.js';
+import { resolveSessionId, stableMessageId } from '../parsing/shared/ids.js';
 
 export class GeminiParser extends BaseParser {
-  async analyze(
-    session: unknown,
-    options: ParserOptions,
-  ): Promise<AnalyzedSession> {
-    const { filePath } = options;
-    const s = session as Record<string, unknown>;
+  async parse(source: SessionSource): Promise<ParserOutput> {
+    const { filePath } = source;
+    const s = (await source.readJson()) as Record<string, unknown>;
+    const fallbackTimestamp = new Date(source.stat.mtimeMs).toISOString();
 
     if (!s || !Array.isArray(s.messages)) {
       throw new Error('Not a valid Gemini session: Missing "messages" array');
@@ -16,14 +17,20 @@ export class GeminiParser extends BaseParser {
 
     const messages: SessionMessage[] = (
       s.messages as Record<string, unknown>[]
-    ).map((m: Record<string, unknown>) => {
+    ).map((m: Record<string, unknown>, index: number) => {
       const msg: SessionMessage = {
-        id: (m.id as string) || '',
-        timestamp: (m.timestamp as string) || '',
+        id:
+          typeof m.id === 'string' && m.id
+            ? m.id
+            : stableMessageId(filePath, index),
+        timestamp:
+          typeof m.timestamp === 'string' && m.timestamp
+            ? m.timestamp
+            : fallbackTimestamp,
         type: (m.type as 'user' | 'gemini' | 'info') || 'info',
-        content: this.extractContent(m.content),
+        content: extractContent(m.content),
         model: m.model as string | undefined,
-        displayContent: this.extractContent(m.displayContent) || undefined,
+        displayContent: extractContent(m.displayContent) || undefined,
       };
 
       if (m.thoughts) {
@@ -93,33 +100,38 @@ export class GeminiParser extends BaseParser {
       (s.projectName as string) || (s.projectHash as string) || 'Unknown';
 
     return {
-      sessionId: resolveSessionId(s, filePath),
-      projectName,
-      sessionTitle: firstPrompt.substring(0, 50),
-      projectHash: (s.projectHash as string) || '',
-      modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'unknown',
-      category,
-      provider: 'gemini',
-      startTime: (s.startTime as string) || '',
-      lastUpdated: (s.lastUpdated as string) || '',
-      expressionQuality: {
-        score: this.coachService.calculateQualityScore(
-          correctionCount,
-          firstPrompt,
-        ),
-        ambiguities: this.coachService.detectAmbiguities(firstPrompt),
-        suggestion: this.coachService.generateSuggestion(firstPrompt),
-      },
-      stats: {
-        turns: userMsgs.length + geminiMsgs.length,
-        userTurns: userMsgs.length,
-        geminiTurns: geminiMsgs.length,
-        corrections: correctionCount,
-        toolChain,
-        tokenUsage,
-      },
-      messages,
-      filePath, // Include filePath
+      sessions: [
+        {
+          sessionId: resolveSessionId(s, filePath),
+          projectName,
+          sessionTitle: firstPrompt.substring(0, 50),
+          projectHash: (s.projectHash as string) || '',
+          modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'unknown',
+          category,
+          provider: 'gemini',
+          startTime: (s.startTime as string) || fallbackTimestamp,
+          lastUpdated: (s.lastUpdated as string) || fallbackTimestamp,
+          expressionQuality: {
+            score: this.coachService.calculateQualityScore(
+              correctionCount,
+              firstPrompt,
+            ),
+            ambiguities: this.coachService.detectAmbiguities(firstPrompt),
+            suggestion: this.coachService.generateSuggestion(firstPrompt),
+          },
+          stats: {
+            turns: userMsgs.length + geminiMsgs.length,
+            userTurns: userMsgs.length,
+            geminiTurns: geminiMsgs.length,
+            corrections: correctionCount,
+            toolChain,
+            tokenUsage,
+          },
+          messages,
+          filePath, // Include filePath
+        },
+      ],
+      warnings: [],
     };
   }
 }

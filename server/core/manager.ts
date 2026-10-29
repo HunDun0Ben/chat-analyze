@@ -1,4 +1,4 @@
-import { SessionParser } from './parser.js';
+import { SessionAnalyzer } from './parsing/SessionAnalyzer.js';
 import { SessionStorage } from '../db/storage.js';
 import { DiscoveryService } from './services/DiscoveryService.js';
 import { ProjectResolver } from './services/ProjectResolver.js';
@@ -7,20 +7,20 @@ import { AnalyzedSession } from '../types/index.js';
 export class SessionManager {
   private sessions: Map<string, AnalyzedSession> = new Map();
   private readonly watchPaths: string[];
-  private readonly parser: SessionParser;
+  private readonly analyzer: SessionAnalyzer;
   private readonly storage: SessionStorage;
   private readonly discoveryService: DiscoveryService;
   private readonly projectResolver: ProjectResolver;
 
   constructor(
     watchPaths: string[],
-    parser: SessionParser,
+    analyzer: SessionAnalyzer,
     storage: SessionStorage,
     discoveryService: DiscoveryService,
     projectResolver: ProjectResolver,
   ) {
     this.watchPaths = watchPaths;
-    this.parser = parser;
+    this.analyzer = analyzer;
     this.storage = storage;
     this.discoveryService = discoveryService;
     this.projectResolver = projectResolver;
@@ -48,14 +48,13 @@ export class SessionManager {
     // 3. Parallel parsing with allSettled to ensure 100% resilience
     const parseResults = await Promise.allSettled(
       discovered.map(async (item) => {
-        const result = await this.parser.analyze(item.filePath);
-        const sessions = Array.isArray(result) ? result : [result];
+        const result = await this.analyzer.analyze(item.filePath);
 
-        for (const session of sessions) {
+        for (const session of result.sessions) {
           await this.applyProjectName(session, item.filePath);
         }
 
-        return sessions;
+        return result;
       }),
     );
 
@@ -69,7 +68,11 @@ export class SessionManager {
         continue;
       }
 
-      for (const session of result.value) {
+      for (const warning of result.value.warnings) {
+        console.warn(`[Manager] ${warning.filePath}: ${warning.reason}`);
+      }
+
+      for (const session of result.value.sessions) {
         if (!session.sessionId) {
           console.warn(
             `[Manager] Skipping session without id from ${discovered[index].filePath}`,
@@ -135,9 +138,13 @@ export class SessionManager {
    * Single file update/add (Used by Watcher)
    */
   async upsertFromFile(filePath: string): Promise<AnalyzedSession> {
-    const result = await this.parser.analyze(filePath);
-    const sessions = Array.isArray(result) ? result : [result];
+    const result = await this.analyzer.analyze(filePath);
 
+    for (const warning of result.warnings) {
+      console.warn(`[Manager] ${warning.filePath}: ${warning.reason}`);
+    }
+
+    const sessions = result.sessions;
     if (sessions.length === 0) {
       throw new Error(`No sessions found in ${filePath}`);
     }

@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
 describe('GeminiJsonlParser (Integration)', () => {
-  const parser = new SessionParser();
+  const parser = new SessionAnalyzer();
   let tempDir: string;
 
   beforeEach(async () => {
@@ -68,28 +68,28 @@ describe('GeminiJsonlParser (Integration)', () => {
     await fs.writeFile(filePath, lines.join('\n'));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
     // Verify metadata
-    expect(result.sessionId).toBe('jsonl-123');
-    expect(result.projectHash).toBe('hash-abc');
-    expect(result.startTime).toBe('2026-04-29T10:00:00.000Z');
-    expect(result.lastUpdated).toBe('2026-04-29T10:01:10.000Z');
-    expect(result.modelId).toBe('gemini-2.0-flash'); // Test the modelId fix
+    expect(session.sessionId).toBe('jsonl-123');
+    expect(session.projectHash).toBe('hash-abc');
+    expect(session.startTime).toBe('2026-04-29T10:00:00.000Z');
+    expect(session.lastUpdated).toBe('2026-04-29T10:01:10.000Z');
+    expect(session.modelId).toBe('gemini-2.0-flash'); // Test the modelId fix
 
     // Verify messages
-    expect(result.messages.length).toBe(3); // info + user + gemini
-    expect(result.messages[0].type).toBe('info');
-    expect(result.messages[1].type).toBe('user');
-    expect(result.messages[1].content).toBe('How are you?');
-    expect(result.messages[2].type).toBe('gemini');
-    expect(result.messages[2].model).toBe('gemini-2.0-flash');
-    expect(result.messages[2].thoughts?.length).toBe(1);
+    expect(session.messages.length).toBe(3); // info + user + gemini
+    expect(session.messages[0].type).toBe('info');
+    expect(session.messages[1].type).toBe('user');
+    expect(session.messages[1].content).toBe('How are you?');
+    expect(session.messages[2].type).toBe('gemini');
+    expect(session.messages[2].model).toBe('gemini-2.0-flash');
+    expect(session.messages[2].thoughts?.length).toBe(1);
 
     // Verify stats
-    expect(result.stats.userTurns).toBe(1);
-    expect(result.stats.geminiTurns).toBe(1);
-    expect(result.stats.tokenUsage.total).toBe(30);
+    expect(session.stats.userTurns).toBe(1);
+    expect(session.stats.geminiTurns).toBe(1);
+    expect(session.stats.tokenUsage.total).toBe(30);
   });
 
   it('should handle malformed lines gracefully', async () => {
@@ -107,10 +107,10 @@ describe('GeminiJsonlParser (Integration)', () => {
     await fs.writeFile(filePath, lines.join('\n'));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
-    expect(result.sessionId).toBe('malformed-test');
-    expect(result.messages.length).toBe(1);
-    expect(result.messages[0].content).toBe('Valid');
+    expect(session.sessionId).toBe('malformed-test');
+    expect(session.messages.length).toBe(1);
+    expect(session.messages[0].content).toBe('Valid');
   });
 });
