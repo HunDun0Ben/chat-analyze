@@ -3,6 +3,13 @@ import request from 'supertest';
 import { createApp, SessionManagerLike } from '../app.js';
 import { StatsService } from '../core/stats/StatsService.js';
 import { AnalyzedSession } from '../types/index.js';
+import {
+  modelStatSchema,
+  projectStatSchema,
+  sessionIndexEntrySchema,
+  statsSummarySchema,
+  statsTimelinePointSchema,
+} from '@chat-analyze/shared';
 
 const EXPORTS_DIR = '/tmp/chat-analyze-test-exports';
 
@@ -22,7 +29,9 @@ function makeSession(
     expressionQuality: { score: 80, ambiguities: [], suggestion: '' },
     stats: {
       turns: 2,
+      totalMessages: 2,
       userTurns: 1,
+      assistantTurns: 1,
       geminiTurns: 1,
       corrections: 0,
       toolChain: [],
@@ -38,7 +47,7 @@ function makeSession(
       {
         id: 'm2',
         timestamp: '2026-01-01T00:00:01.000Z',
-        type: 'gemini',
+        type: 'assistant',
         content: 'use FLUSHDB',
       },
     ],
@@ -86,6 +95,11 @@ describe('GET /api/sessions', () => {
         firstMessage: 'how do I reset the cache?',
       }),
     ]);
+
+    // The UI imports the same schema, so a drifting projection fails here.
+    expect(() =>
+      sessionIndexEntrySchema.array().parse(response.body),
+    ).not.toThrow();
   });
 
   it('returns 404 for an unknown session', async () => {
@@ -219,7 +233,9 @@ describe('GET /api/stats', () => {
         expressionQuality: { score: 100, ambiguities: [], suggestion: '' },
         stats: {
           turns: 0,
+          totalMessages: 0,
           userTurns: 0,
+          assistantTurns: 0,
           geminiTurns: 0,
           corrections: 0,
           toolChain: [],
@@ -237,7 +253,30 @@ describe('GET /api/stats', () => {
     const timeline = await request(appWith(sessions))
       .get('/api/stats/timeline')
       .expect(200);
-    expect(timeline.body).toEqual([{ date: '2026-01-01', avgScore: 60 }]);
+    expect(timeline.body).toEqual([
+      { date: '2026-01-01', avgScore: 60, sessionCount: 2, totalTokens: 2 },
+    ]);
+    expect(() => statsSummarySchema.parse(summary.body)).not.toThrow();
+    expect(() =>
+      statsTimelinePointSchema.array().parse(timeline.body),
+    ).not.toThrow();
+  });
+
+  it('keeps the model and project stats payloads inside the shared contract', async () => {
+    const sessions = [
+      makeSession({ sessionId: 'a', projectName: 'p1', modelId: 'm1' }),
+      makeSession({ sessionId: 'b', projectName: 'p2', modelId: 'm2' }),
+    ];
+
+    const models = await request(appWith(sessions))
+      .get('/api/stats/models')
+      .expect(200);
+    const projects = await request(appWith(sessions))
+      .get('/api/user-questions/stats')
+      .expect(200);
+
+    expect(() => modelStatSchema.array().parse(models.body)).not.toThrow();
+    expect(() => projectStatSchema.array().parse(projects.body)).not.toThrow();
   });
 });
 

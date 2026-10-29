@@ -94,7 +94,7 @@ describe('SessionAnalyzer (ChatGPT Unification)', () => {
     expect(session.messages.length).toBe(2); // One user, one assistant (unified)
 
     const assistantMsg = session.messages[1];
-    expect(assistantMsg.type).toBe('gemini');
+    expect(assistantMsg.type).toBe('assistant');
     expect(assistantMsg.content).toContain('Here is what I found');
 
     // Check thoughts
@@ -167,7 +167,7 @@ describe('SessionAnalyzer (ChatGPT Unification)', () => {
 
     expect(session.messages.length).toBe(3);
     expect(session.messages[0].type).toBe('user');
-    expect(session.messages[1].type).toBe('gemini');
+    expect(session.messages[1].type).toBe('assistant');
     expect(session.messages[2].type).toBe('user');
 
     await fs.rm(tempDir, { recursive: true, force: true });

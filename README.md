@@ -80,6 +80,7 @@ npm run dev
 
 ## 🏛️ Directory Structure
 
+- `shared/`: 前后端共享契约（`@chat-analyze/shared`，类型 + zod schema）
 - `server/`: Backend Core
   - `core/`: Parser, Watcher, Manager
   - `api/`: RESTful API Service

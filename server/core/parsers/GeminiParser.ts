@@ -1,4 +1,5 @@
 import { SessionMessage } from '../../types/index.js';
+import { turnStats } from '@chat-analyze/shared';
 import { BaseParser } from './BaseParser.js';
 import { ParserOutput } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
@@ -25,7 +26,12 @@ export class GeminiParser extends BaseParser {
       const msg: SessionMessage = {
         id: m.id || stableMessageId(filePath, index),
         timestamp: toIsoTimestamp(m.timestamp, fallbackTimestamp),
-        type: m.type === 'user' || m.type === 'gemini' ? m.type : 'info',
+        type:
+          m.type === 'user'
+            ? 'user'
+            : m.type === 'gemini'
+              ? 'assistant'
+              : 'info',
         content: extractContent(m.content),
         model: m.model,
         displayContent: extractContent(m.displayContent) || undefined,
@@ -55,7 +61,8 @@ export class GeminiParser extends BaseParser {
     });
 
     const userMsgs = messages.filter((m) => m.type === 'user');
-    const geminiMsgs = messages.filter((m) => m.type === 'gemini');
+    const assistantMsgs = messages.filter((m) => m.type === 'assistant');
+    const counts = turnStats(messages);
 
     const toolChain = messages
       .flatMap((m) => m.toolCalls || [])
@@ -104,7 +111,7 @@ export class GeminiParser extends BaseParser {
           projectNameIsPlaceholder,
           sessionTitle: firstPrompt.substring(0, 50),
           projectHash: s.projectHash ?? '',
-          modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'unknown',
+          modelId: assistantMsgs[assistantMsgs.length - 1]?.model || 'unknown',
           category,
           provider: 'gemini',
           startTime: s.startTime || fallbackTimestamp,
@@ -119,9 +126,11 @@ export class GeminiParser extends BaseParser {
             suggestion: this.coachService.generateSuggestion(firstPrompt),
           },
           stats: {
-            turns: userMsgs.length + geminiMsgs.length,
-            userTurns: userMsgs.length,
-            geminiTurns: geminiMsgs.length,
+            turns: counts.turns,
+            totalMessages: counts.totalMessages,
+            userTurns: counts.userTurns,
+            assistantTurns: counts.assistantTurns,
+            geminiTurns: counts.assistantTurns,
             corrections: correctionCount,
             toolChain,
             tokenUsage,

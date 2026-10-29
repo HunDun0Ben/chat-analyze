@@ -23,7 +23,9 @@ function session(overrides: Partial<AnalyzedSession> = {}): AnalyzedSession {
     },
     stats: {
       turns: 2,
+      totalMessages: 2,
       userTurns: 1,
+      assistantTurns: 1,
       geminiTurns: 1,
       corrections: 0,
       toolChain: [],

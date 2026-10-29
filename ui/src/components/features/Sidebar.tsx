@@ -12,7 +12,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { fetchProjects, fetchSessions, fetchSessionsSummary } from '../../api';
-import type { AnalyzedSession, SidebarSession } from '../../types';
+import type { AnalyzedSession, SessionIndexEntry } from '@chat-analyze/shared';
 import { cn } from '../../utils';
 import { Badge } from '../ui/Badge';
 import { Tabs } from '../ui/Tabs';
@@ -26,7 +26,7 @@ export function Sidebar() {
   const [projects, setProjects] = useState<string[]>([]);
   const [selectedProject, setSelectedProject] = useState<string | null>(null);
   const [sessions, setSessions] = useState<AnalyzedSession[]>([]);
-  const [allSessions, setAllSessions] = useState<SidebarSession[]>([]);
+  const [allSessions, setAllSessions] = useState<SessionIndexEntry[]>([]);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function Sidebar() {
       string,
       {
         matches: boolean;
-        visibleSessions: SidebarSession[];
+        visibleSessions: SessionIndexEntry[];
       }
     > = {};
 
@@ -241,7 +241,7 @@ export function Sidebar() {
                   <div className="ml-4 pl-4 border-l border-slate-800 space-y-1 py-1 animate-in slide-in-from-top-2 duration-200">
                     {displaySessions.length > 0
                       ? displaySessions.map(
-                          (session: AnalyzedSession | SidebarSession) => (
+                          (session: AnalyzedSession | SessionIndexEntry) => (
                             <SessionLink
                               key={session.sessionId}
                               session={session}
@@ -289,7 +289,7 @@ function SessionLink({
   session,
   variant = 'blue',
 }: {
-  session: AnalyzedSession | SidebarSession;
+  session: AnalyzedSession | SessionIndexEntry;
   variant?: 'blue' | 'emerald';
 }) {
   const colors = {

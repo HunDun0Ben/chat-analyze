@@ -9,7 +9,7 @@ import {
   CheckCircle2,
   ArrowUpRight,
 } from 'lucide-react';
-import type { AnalyzedSession } from '../../types';
+import type { AnalyzedSession } from '@chat-analyze/shared';
 import { cn } from '../../utils';
 import { useSessionExport } from '../../features/session/useSession';
 import { Tabs } from '../ui/Tabs';

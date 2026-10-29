@@ -1,4 +1,10 @@
-import { AnalyzedSession } from '../../types/index.js';
+import type {
+  AnalyzedSession,
+  ModelStat,
+  ProjectStat,
+  StatsSummary,
+  StatsTimelinePoint,
+} from '@chat-analyze/shared';
 
 /**
  * A session counts towards statistics when it has at least one user turn.
@@ -25,11 +31,7 @@ function average(values: number[]): number {
  * inflate the dashboard); `summary.total` still reports the raw session count.
  */
 export class StatsService {
-  summary(sessions: AnalyzedSession[]): {
-    total: number;
-    avgScore: number;
-    totalTokens: number;
-  } {
+  summary(sessions: AnalyzedSession[]): StatsSummary {
     const scoreable = sessions.filter(isScoreable);
 
     return {
@@ -42,29 +44,48 @@ export class StatsService {
     };
   }
 
-  timeline(sessions: AnalyzedSession[]): { date: string; avgScore: number }[] {
-    const groups = new Map<string, number[]>();
+  /**
+   * One point per day that has at least one scoreable session.
+   *
+   * `avgScore` only averages scoreable sessions, while `sessionCount` /
+   * `totalTokens` cover every session of that day so the dashboard cards add
+   * up. Days with only empty sessions are omitted to keep 0 out of the chart.
+   */
+  timeline(sessions: AnalyzedSession[]): StatsTimelinePoint[] {
+    const groups = new Map<
+      string,
+      { scores: number[]; sessionCount: number; totalTokens: number }
+    >();
 
     for (const session of sessions) {
-      if (!isScoreable(session)) continue;
       const date = session.startTime.split('T')[0];
-      const scores = groups.get(date) ?? [];
-      scores.push(session.expressionQuality.score);
-      groups.set(date, scores);
+      const group = groups.get(date) ?? {
+        scores: [],
+        sessionCount: 0,
+        totalTokens: 0,
+      };
+
+      group.sessionCount++;
+      group.totalTokens += session.stats.tokenUsage.total;
+      if (isScoreable(session)) {
+        group.scores.push(session.expressionQuality.score);
+      }
+
+      groups.set(date, group);
     }
 
     return [...groups.entries()]
-      .map(([date, scores]) => ({ date, avgScore: average(scores) }))
+      .filter(([, group]) => group.scores.length > 0)
+      .map(([date, group]) => ({
+        date,
+        avgScore: average(group.scores),
+        sessionCount: group.sessionCount,
+        totalTokens: group.totalTokens,
+      }))
       .sort((a, b) => a.date.localeCompare(b.date));
   }
 
-  byModel(sessions: AnalyzedSession[]): {
-    modelId: string;
-    sessionCount: number;
-    avgScore: number;
-    avgTokens: number;
-    avgTurns: number;
-  }[] {
+  byModel(sessions: AnalyzedSession[]): ModelStat[] {
     const groups = new Map<string, AnalyzedSession[]>();
 
     for (const session of sessions) {
@@ -86,12 +107,7 @@ export class StatsService {
       .sort((a, b) => b.avgScore - a.avgScore);
   }
 
-  byProject(sessions: AnalyzedSession[]): {
-    projectName: string;
-    sessionCount: number;
-    totalQuestions: number;
-    avgScore: number;
-  }[] {
+  byProject(sessions: AnalyzedSession[]): ProjectStat[] {
     const groups = new Map<string, AnalyzedSession[]>();
 
     for (const session of sessions) {

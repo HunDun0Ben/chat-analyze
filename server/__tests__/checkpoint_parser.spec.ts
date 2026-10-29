@@ -66,7 +66,7 @@ describe('GeminiCheckpointParser', () => {
     expect(result.messages[0].content).toBe('帮我切换到任意一个 7.x 版本');
 
     // Model message with thought and tool call
-    expect(result.messages[1].type).toBe('gemini');
+    expect(result.messages[1].type).toBe('assistant');
     expect(result.messages[1].content).toContain('我将先列出项目中的所有标签');
     expect(result.messages[1].thoughts?.length).toBe(1);
     expect(result.messages[1].toolCalls?.length).toBe(1);

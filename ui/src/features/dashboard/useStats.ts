@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { fetchStatsTimeline, fetchModelStats } from '../../api';
-import type { StatsTimeline, ModelStat } from '../../types';
+import type { StatsTimelinePoint, ModelStat } from '@chat-analyze/shared';
 
 export function useStats() {
   const {
     data: timelineData,
     isLoading: timelineLoading,
     error: timelineError,
-  } = useQuery<StatsTimeline[]>({
+  } = useQuery<StatsTimelinePoint[]>({
     queryKey: ['dashboardStatsTimeline'],
     queryFn: fetchStatsTimeline,
     staleTime: 5 * 60 * 1000, // 5 minutes

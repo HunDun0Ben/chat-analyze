@@ -5,21 +5,23 @@
   "private": true,
   "type": "module",
   "workspaces": [
+    "shared",
     "server",
     "ui"
   ],
   "scripts": {
+    "build:shared": "npm run build -w @chat-analyze/shared",
     "dev:server": "npm run dev -w @chat-analyze/server",
     "dev:ui": "npm run dev -w @chat-analyze/ui",
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:ui\"",
-    "build": "npm run build --workspaces",
+    "dev": "npm run build:shared && concurrently \"npm run dev:server\" \"npm run dev:ui\"",
+    "build": "npm run build:shared && npm run build -w @chat-analyze/server && npm run build -w @chat-analyze/ui",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "npm run test --workspaces",
+    "test:unit": "npm run build:shared && npm run test --workspaces --if-present",
     "test:e2e": "npm run test:e2e -w @chat-analyze/ui",
-    "lint": "npm run lint --workspaces",
+    "lint": "npm run build:shared && npm run lint --workspaces",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "concurrently \"npm run typecheck:ui\" \"npm run typecheck:server\"",
+    "typecheck": "npm run build:shared && concurrently \"npm run typecheck:ui\" \"npm run typecheck:server\"",
     "typecheck:ui": "cd ui && npx tsc -b",
     "typecheck:server": "cd server && npx tsc --noEmit",
     "preflight": "npm run format:check && npm run lint && npm run typecheck && npm run test && npm run build"
