@@ -201,6 +201,7 @@ export function Sidebar() {
             return (
               <div key={project} className="space-y-1">
                 <button
+                  data-testid={`project-item-${project}`}
                   onClick={() =>
                     setSelectedProject(
                       selectedProject === project ? null : project,

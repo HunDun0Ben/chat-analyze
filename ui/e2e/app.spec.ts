@@ -1,8 +1,6 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Chat Analyze Frontend', () => {
-  const APP_URL = 'http://localhost:5173';
-
   test.beforeEach(async ({ page }) => {
     // Mock API responses
     await page.route('**/api/projects?provider=gemini', async (route) => {
@@ -13,7 +11,24 @@ test.describe('Chat Analyze Frontend', () => {
       });
     });
 
-    await page.route('**/api/sessions?project=test-project', async (route) => {
+    await page.route('**/api/sessions/summary', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            sessionId: 'test-session-id',
+            projectName: 'test-project',
+            sessionTitle: 'Test Session',
+            provider: 'gemini',
+            startTime: new Date().toISOString(),
+            expressionQuality: { score: 95 },
+          },
+        ]),
+      });
+    });
+
+    await page.route('**/api/projects/test-project/sessions', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -24,12 +39,15 @@ test.describe('Chat Analyze Frontend', () => {
             sessionTitle: 'Test Session',
             messages: [{ type: 'user', content: 'Hello' }],
             modelId: 'gemini-1.5-pro',
+            provider: 'gemini',
+            startTime: new Date().toISOString(),
+            expressionQuality: { score: 95 },
           },
         ]),
       });
     });
 
-    await page.route('**/api/session/test-session-id', async (route) => {
+    await page.route('**/api/sessions/test-session-id', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -71,7 +89,7 @@ test.describe('Chat Analyze Frontend', () => {
     });
 
     // 确保开发服务器已启动 (如果未启动则会失败)
-    await page.goto(APP_URL);
+    await page.goto('/');
   });
 
   test('should display the app title', async ({ page }) => {
@@ -89,17 +107,11 @@ test.describe('Chat Analyze Frontend', () => {
   });
 
   test('should expand a project to show sessions', async ({ page }) => {
-    // 等待项目列表加载
-    await page.waitForResponse((resp) => resp.url().includes('/api/projects'));
-
-    // 获取第一个项目按钮并点击
     const firstProject = page
       .locator('button[data-testid^="project-item-"]')
       .first();
+    await expect(firstProject).toBeVisible();
     await firstProject.click();
-
-    // 等待会话列表 API 响应
-    await page.waitForResponse((resp) => resp.url().includes('/api/sessions'));
 
     // 等待会话链接出现
     const sessionLinks = page.locator('a[data-testid^="session-link-"]');
@@ -107,16 +119,16 @@ test.describe('Chat Analyze Frontend', () => {
   });
 
   test('should load session content when clicked', async ({ page }) => {
-    // 等待项目加载并展开第一个项目
-    await page.waitForResponse((resp) => resp.url().includes('/api/projects'));
-    await page.locator('button[data-testid^="project-item-"]').first().click();
+    const firstProject = page
+      .locator('button[data-testid^="project-item-"]')
+      .first();
+    await expect(firstProject).toBeVisible();
+    await firstProject.click();
 
-    // 等待会话加载并点击第一个会话链接
-    await page.waitForResponse((resp) => resp.url().includes('/api/sessions'));
     const firstSession = page
       .locator('a[data-testid^="session-link-"]')
       .first();
-    await firstSession.click();
+    await expect(firstSession).toBeVisible();
     await firstSession.click();
 
     // 验证主视图中是否显示了项目标识
