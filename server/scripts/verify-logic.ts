@@ -11,7 +11,7 @@ import os from 'node:os';
 
 async function verify() {
   const watchPath = [path.join(os.homedir(), '.gemini/tmp')];
-  const storage = new SessionStorage();
+  const storage = new SessionStorage(':memory:');
   const parser = new SessionParser();
   const discoveryService = new DiscoveryService();
   const projectResolver = new ProjectResolver();
