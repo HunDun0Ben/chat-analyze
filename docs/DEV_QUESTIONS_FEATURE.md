@@ -7,7 +7,7 @@
 ### 数据流向
 
 1.  `SessionManager` 从本地 JSONL/Checkpoint 文件加载会话。
-2.  `server/api/server.ts` 对内存中的会话进行二次投影，仅保留用户提问信息。
+2.  `server/api/services/UserQuestionsService.ts` 对内存中的会话进行二次投影，仅保留用户提问信息；`server/api/routes/questions.ts` 负责分页与响应格式。
 3.  前端 `QuestionsView.tsx` 负责状态管理与导出逻辑。
 
 ## 2. 后端 API 规范

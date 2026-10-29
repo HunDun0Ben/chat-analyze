@@ -7,6 +7,7 @@ import { SessionStorage } from './db/storage.js';
 import { DiscoveryService } from './core/services/DiscoveryService.js';
 import { ProjectResolver } from './core/services/ProjectResolver.js';
 import { ChatWatcher } from './core/watcher.js';
+import { createShutdownHandler } from './lifecycle.js';
 
 async function bootstrap(): Promise<void> {
   const config = loadConfig();
@@ -35,7 +36,7 @@ async function bootstrap(): Promise<void> {
   const watcher = new ChatWatcher(config.watchPaths, manager);
   watcher.start();
 
-  await startServer(
+  const server = await startServer(
     { manager, exportsDir: config.exportsDir },
     { port: config.port, host: config.host },
   );
@@ -43,15 +44,11 @@ async function bootstrap(): Promise<void> {
   console.log('[System] Service is ready.');
   console.log(`[System] API: http://${config.host}:${config.port}`);
 
-  process.on('SIGINT', async () => {
-    console.log('\n[System] Shutting down...');
-    try {
-      await watcher.stop();
-    } catch (err) {
-      console.error('Error during shutdown:', err);
-    }
-    process.exit(0);
+  const shutdown = createShutdownHandler({
+    targets: { watcher, server, storage },
   });
+  process.on('SIGINT', () => void shutdown('SIGINT'));
+  process.on('SIGTERM', () => void shutdown('SIGTERM'));
 }
 
 bootstrap().catch((err) => {
