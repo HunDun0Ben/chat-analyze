@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import { ProjectResolver } from '../core/services/ProjectResolver.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 
-describe('SessionParser (Spec)', () => {
-  const parser = new SessionParser();
+describe('SessionAnalyzer (Spec)', () => {
+  const parser = new SessionAnalyzer();
   const projectResolver = new ProjectResolver();
   let tempDir: string;
 
@@ -47,8 +47,8 @@ describe('SessionParser (Spec)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
-    expect(result.projectName).toBe(hash);
+    const session = result.sessions[0];
+    expect(session.projectName).toBe(hash);
     expect(await projectResolver.resolve('gemini', filePath, [tempDir])).toBe(
       'my-cool-project',
     );
@@ -71,8 +71,8 @@ describe('SessionParser (Spec)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
-    expect(result.projectName).toBe('CustomName');
+    const session = result.sessions[0];
+    expect(session.projectName).toBe('CustomName');
   });
 
   it('Scenario 3: No "chats" directory in path', async () => {
@@ -93,8 +93,8 @@ describe('SessionParser (Spec)', () => {
     await fs.writeFile(filePath, JSON.stringify(mockSession));
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
-    expect(result.projectName).toBe(hash);
+    const session = result.sessions[0];
+    expect(session.projectName).toBe(hash);
     expect(await projectResolver.resolve('gemini', filePath, [tempDir])).toBe(
       'simple-project',
     );

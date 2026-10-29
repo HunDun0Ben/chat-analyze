@@ -1,9 +1,7 @@
-import {
-  AnalyzedSession,
-  SessionMessage,
-  ToolCall,
-} from '../../types/index.js';
-import { BaseParser, ParserOptions } from './BaseParser.js';
+import { SessionMessage, ToolCall } from '../../types/index.js';
+import { BaseParser } from './BaseParser.js';
+import { ParserOutput } from '../parsing/result.js';
+import { SessionSource } from '../parsing/source.js';
 import { stableSessionId } from '../parsing/shared/ids.js';
 
 interface GeminiPart {
@@ -31,74 +29,75 @@ interface GeminiHistoryItem {
  * Handles the native Gemini API history format (with 'history' and 'parts').
  */
 export class GeminiCheckpointParser extends BaseParser {
-  async analyze(
-    session: unknown,
-    options: ParserOptions,
-  ): Promise<AnalyzedSession> {
-    const { filePath, fileName } = options;
-    const s = session as { history: GeminiHistoryItem[] };
+  async parse(source: SessionSource): Promise<ParserOutput> {
+    const { filePath, fileName } = source;
+    const s = (await source.readJson()) as { history: GeminiHistoryItem[] };
+    // Checkpoints do not store message timestamps. Using the file mtime keeps
+    // the parse deterministic instead of shifting on every restart.
+    const timestamp = new Date(source.stat.mtimeMs).toISOString();
 
     if (!s || !Array.isArray(s.history)) {
       throw new Error('Not a valid Gemini checkpoint: Missing "history" array');
     }
 
-    const messages: SessionMessage[] = s.history.map((h, index: number) => {
-      const type = h.role === 'model' ? 'gemini' : 'user';
-      const timestamp = new Date().toISOString(); // Fallback timestamp
+    const messages: SessionMessage[] = s.history.map(
+      (h: GeminiHistoryItem, index: number) => {
+        const type = h.role === 'model' ? 'gemini' : 'user';
 
-      const msg: SessionMessage = {
-        id: `msg-${index}`,
-        timestamp,
-        type,
-        content: '',
-      };
+        const msg: SessionMessage = {
+          id: `msg-${index}`,
+          timestamp,
+          type,
+          content: '',
+        };
 
-      if (Array.isArray(h.parts)) {
-        const texts: string[] = [];
-        const toolCalls: ToolCall[] = [];
+        if (Array.isArray(h.parts)) {
+          const texts: string[] = [];
+          const toolCalls: ToolCall[] = [];
 
-        for (const part of h.parts as GeminiPart[]) {
-          if (part.text) {
-            if (part.thought === true) {
-              if (!msg.thoughts) msg.thoughts = [];
-              msg.thoughts.push({
-                subject: 'Thought Process',
-                description: part.text,
+          for (const part of h.parts as GeminiPart[]) {
+            if (part.text) {
+              if (part.thought === true) {
+                if (!msg.thoughts) msg.thoughts = [];
+                msg.thoughts.push({
+                  subject: 'Thought Process',
+                  description: part.text,
+                  timestamp,
+                });
+              } else {
+                texts.push(part.text);
+              }
+            }
+
+            if (part.functionCall) {
+              toolCalls.push({
+                id: part.functionCall.id || `call-${index}`,
+                name: part.functionCall.name,
+                args: part.functionCall.args || {},
+                status: 'pending',
                 timestamp,
               });
-            } else {
-              texts.push(part.text);
+            }
+
+            if (part.functionResponse) {
+              toolCalls.push({
+                id: part.functionResponse.id,
+                name: part.functionResponse.name,
+                args: {}, // Response doesn't have args
+                result: part.functionResponse.response,
+                status: 'success',
+                timestamp,
+              });
             }
           }
 
-          if (part.functionCall) {
-            toolCalls.push({
-              id: part.functionCall.id || `call-${index}`,
-              name: part.functionCall.name,
-              args: part.functionCall.args || {},
-              status: 'pending',
-              timestamp,
-            });
-          }
-
-          if (part.functionResponse) {
-            toolCalls.push({
-              id: part.functionResponse.id,
-              name: part.functionResponse.name,
-              args: {}, // Response doesn't have args
-              result: part.functionResponse.response,
-              status: 'success',
-              timestamp,
-            });
-          }
+          msg.content = texts.join('\n').trim();
+          if (toolCalls.length > 0) msg.toolCalls = toolCalls;
         }
 
-        msg.content = texts.join('\n').trim();
-        if (toolCalls.length > 0) msg.toolCalls = toolCalls;
-      }
-
-      return msg;
-    });
+        return msg;
+      },
+    );
 
     const userMsgs = messages.filter((m) => m.type === 'user');
     const geminiMsgs = messages.filter((m) => m.type === 'gemini');
@@ -131,35 +130,39 @@ export class GeminiCheckpointParser extends BaseParser {
     }
 
     return {
-      sessionId,
-      projectName,
-      sessionTitle,
-      isCheckpoint: true,
-      projectHash: '', // Not available in checkpoints
-      modelId: 'gemini-pro', // Fallback for checkpoints
-      category,
-      provider: 'gemini',
-      startTime: messages[0]?.timestamp || new Date().toISOString(),
-      lastUpdated:
-        messages[messages.length - 1]?.timestamp || new Date().toISOString(),
-      expressionQuality: {
-        score: this.coachService.calculateQualityScore(
-          correctionCount,
-          firstPrompt,
-        ),
-        ambiguities: this.coachService.detectAmbiguities(firstPrompt),
-        suggestion: this.coachService.generateSuggestion(firstPrompt),
-      },
-      stats: {
-        turns: userMsgs.length + geminiMsgs.length,
-        userTurns: userMsgs.length,
-        geminiTurns: geminiMsgs.length,
-        corrections: correctionCount,
-        toolChain,
-        tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }, // Checkpoints don't usually include token info
-      },
-      messages,
-      filePath, // Include filePath
+      sessions: [
+        {
+          sessionId,
+          projectName,
+          sessionTitle,
+          isCheckpoint: true,
+          projectHash: '', // Not available in checkpoints
+          modelId: 'gemini-pro', // Fallback for checkpoints
+          category,
+          provider: 'gemini',
+          startTime: timestamp,
+          lastUpdated: timestamp,
+          expressionQuality: {
+            score: this.coachService.calculateQualityScore(
+              correctionCount,
+              firstPrompt,
+            ),
+            ambiguities: this.coachService.detectAmbiguities(firstPrompt),
+            suggestion: this.coachService.generateSuggestion(firstPrompt),
+          },
+          stats: {
+            turns: userMsgs.length + geminiMsgs.length,
+            userTurns: userMsgs.length,
+            geminiTurns: geminiMsgs.length,
+            corrections: correctionCount,
+            toolChain,
+            tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 }, // Checkpoints don't usually include token info
+          },
+          messages,
+          filePath, // Include filePath
+        },
+      ],
+      warnings: [],
     };
   }
 

@@ -1,10 +1,10 @@
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import { SessionStorage } from '../db/storage.js';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 
 async function runTest() {
-  const parser = new SessionParser();
+  const parser = new SessionAnalyzer();
   const storage = new SessionStorage('./chat_analyze.db');
   const chatsDir = '/home/ben/.gemini/tmp/chat-analyze/chats/';
 
@@ -20,7 +20,7 @@ async function runTest() {
     const file = jsonFiles[0];
     const filePath = path.join(chatsDir, file);
     const result = await parser.analyze(filePath);
-    const sessions = Array.isArray(result) ? result : [result];
+    const sessions = result.sessions;
 
     console.log(`\n--- Single File Storage Test: ${file} ---`);
     for (const session of sessions) {

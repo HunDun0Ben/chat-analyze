@@ -12,6 +12,18 @@ export function stableSessionId(filePath: string, index?: number): string {
   return crypto.createHash('sha256').update(input).digest('hex').slice(0, 32);
 }
 
+/**
+ * Deterministic id for messages that do not carry one. Line-based so the same
+ * file always produces the same ids.
+ */
+export function stableMessageId(filePath: string, position: number): string {
+  return crypto
+    .createHash('sha256')
+    .update(`${filePath}#${position}`)
+    .digest('hex')
+    .slice(0, 16);
+}
+
 function nonEmptyString(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();

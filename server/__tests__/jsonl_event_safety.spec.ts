@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 
 async function writeJsonl(
   dir: string,
@@ -19,7 +19,7 @@ async function writeJsonl(
 
 describe('GeminiJsonlParser event safety', () => {
   let tempDir: string;
-  const parser = new SessionParser();
+  const parser = new SessionAnalyzer();
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'chat-analyze-jsonl-'));
@@ -46,12 +46,12 @@ describe('GeminiJsonlParser event safety', () => {
     ]);
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
-    expect(result.messages[0].content).toBe(
+    expect(session.messages[0].content).toBe(
       'first line\nsecond line\nthird line',
     );
-    expect(result.messages[0].content).not.toContain('\\n');
+    expect(session.messages[0].content).not.toContain('\\n');
   });
 
   it('ignores $set keys outside the metadata whitelist', async () => {
@@ -69,12 +69,12 @@ describe('GeminiJsonlParser event safety', () => {
     ]);
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
-    expect(result.sessionId).toBe('set-test');
-    expect(result.messages).toHaveLength(1);
-    expect(result.messages[0].content).toBe('keep me');
-    expect(result.lastUpdated).toBe('2026-01-01T00:00:02.000Z');
+    expect(session.sessionId).toBe('set-test');
+    expect(session.messages).toHaveLength(1);
+    expect(session.messages[0].content).toBe('keep me');
+    expect(session.lastUpdated).toBe('2026-01-01T00:00:02.000Z');
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('unsupported $set key'),
     );
@@ -93,8 +93,8 @@ describe('GeminiJsonlParser event safety', () => {
     ]);
 
     const result = await parser.analyze(filePath);
-    if (Array.isArray(result)) throw new Error('Expected single session');
+    const session = result.sessions[0];
 
-    expect(result.sessionTitle).toBe('Renamed session');
+    expect(session.sessionTitle).toBe('Renamed session');
   });
 });

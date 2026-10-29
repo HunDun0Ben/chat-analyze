@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { SessionManager } from '../core/manager.js';
-import { SessionParser } from '../core/parser.js';
+import { SessionAnalyzer } from '../core/parsing/SessionAnalyzer.js';
 import { SessionStorage } from '../db/storage.js';
 import { DiscoveryService } from '../core/services/DiscoveryService.js';
 import { ProjectResolver } from '../core/services/ProjectResolver.js';
@@ -98,7 +98,7 @@ describe('SessionManager project naming', () => {
 
     manager = new SessionManager(
       watchPaths,
-      new SessionParser(),
+      new SessionAnalyzer(),
       new SessionStorage(':memory:'),
       new DiscoveryService(),
       new ProjectResolver(),

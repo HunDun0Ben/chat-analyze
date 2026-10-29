@@ -3,15 +3,17 @@ import {
   SessionMessage,
   ToolCall,
 } from '../../types/index.js';
-import { BaseParser, ParserOptions } from './BaseParser.js';
+import { BaseParser } from './BaseParser.js';
+import { ParserOutput } from '../parsing/result.js';
+import { SessionSource } from '../parsing/source.js';
+import { extractContent } from '../parsing/shared/content.js';
 import { resolveSessionId } from '../parsing/shared/ids.js';
 
 export class ChatGPTParser extends BaseParser {
-  async analyze(
-    session: unknown,
-    options: ParserOptions,
-  ): Promise<AnalyzedSession> {
-    const s = session as Record<string, unknown>;
+  async parse(source: SessionSource): Promise<ParserOutput> {
+    const { filePath, fileName } = source;
+    const s = (await source.readJson()) as Record<string, unknown>;
+    const fallbackTimestamp = new Date(source.stat.mtimeMs).toISOString();
     const currentNodeId = s.current_node as string;
     const nodeChain: Record<string, unknown>[] = [];
 
@@ -42,11 +44,11 @@ export class ChatGPTParser extends BaseParser {
     for (const m of nodeChain) {
       const author = (m.author || {}) as Record<string, string>;
       const role = author.role;
-      const content = this.extractContent(m.content);
+      const content = extractContent(m.content);
       const mMetadata = (m.metadata || {}) as Record<string, unknown>;
       const timestamp = m.create_time
         ? new Date((m.create_time as number) * 1000).toISOString()
-        : new Date().toISOString();
+        : fallbackTimestamp;
 
       if (role === 'user') {
         if (pendingAssistantMsg) {
@@ -160,19 +162,19 @@ export class ChatGPTParser extends BaseParser {
     );
 
     const result: AnalyzedSession = {
-      sessionId: resolveSessionId(s, options.filePath, options.index),
+      sessionId: resolveSessionId(s, source.filePath, source.index),
       projectName: 'ChatGPT Import',
-      sessionTitle: options.fileName || (s.title as string) || 'ChatGPT Chat',
+      sessionTitle: fileName || (s.title as string) || 'ChatGPT Chat',
       projectHash: 'chatgpt-import',
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'chatgpt',
       category: this.coachService.detectCategory(firstPrompt, toolChain),
       provider: 'chatgpt',
       startTime: s.create_time
         ? new Date((s.create_time as number) * 1000).toISOString()
-        : new Date().toISOString(),
+        : fallbackTimestamp,
       lastUpdated: s.update_time
         ? new Date((s.update_time as number) * 1000).toISOString()
-        : new Date().toISOString(),
+        : fallbackTimestamp,
       expressionQuality: {
         score: this.coachService.calculateQualityScore(
           correctionCount,
@@ -190,13 +192,13 @@ export class ChatGPTParser extends BaseParser {
         tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 },
       },
       messages: resultMessages,
-      filePath: options.filePath,
+      filePath,
     };
 
-    if (s.title && options.fileName && s.title !== options.fileName) {
-      result.sessionTitle = `${options.fileName} (${s.title})`;
+    if (s.title && fileName && s.title !== fileName) {
+      result.sessionTitle = `${fileName} (${s.title})`;
     }
 
-    return result;
+    return { sessions: [result], warnings: [] };
   }
 }

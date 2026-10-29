@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { GeminiCheckpointParser } from '../core/parsers/GeminiCheckpointParser.js';
 import { CoachService } from '../core/services/CoachService.js';
+import { createMemorySource } from '../core/parsing/source.js';
 
 describe('GeminiCheckpointParser', () => {
   const coachService = new CoachService();
@@ -47,10 +48,15 @@ describe('GeminiCheckpointParser', () => {
   };
 
   it('should correctly parse history into session messages', async () => {
-    const result = await parser.analyze(mockCheckpoint, {
-      filePath: '/path/to/checkpoint-redis.json',
-      fileName: 'checkpoint-redis',
-    });
+    const output = await parser.parse(
+      createMemorySource({
+        filePath: '/path/to/checkpoint-redis.json',
+        fileName: 'checkpoint-redis',
+        data: mockCheckpoint,
+        mtimeMs: 0,
+      }),
+    );
+    const result = output.sessions[0];
 
     expect(result.projectName).toBe('redis');
     expect(result.messages.length).toBe(3);
@@ -83,14 +89,15 @@ describe('GeminiCheckpointParser', () => {
     ];
 
     for (const testCase of cases) {
-      const result = await parser.analyze(
-        { history: [] },
-        {
+      const output = await parser.parse(
+        createMemorySource({
           filePath: `/tmp/${testCase.fileName}.json`,
           fileName: testCase.fileName,
-        },
+          data: { history: [] },
+          mtimeMs: 0,
+        }),
       );
-      expect(result.projectName).toBe(testCase.expected);
+      expect(output.sessions[0].projectName).toBe(testCase.expected);
     }
   });
 });
