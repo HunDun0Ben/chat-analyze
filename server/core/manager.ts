@@ -70,6 +70,12 @@ export class SessionManager {
       }
 
       for (const session of result.value) {
+        if (!session.sessionId) {
+          console.warn(
+            `[Manager] Skipping session without id from ${discovered[index].filePath}`,
+          );
+          continue;
+        }
         this.sessions.set(session.sessionId, session);
         this.persistSession(session);
       }
@@ -132,11 +138,19 @@ export class SessionManager {
     const result = await this.parser.analyze(filePath);
     const sessions = Array.isArray(result) ? result : [result];
 
+    if (sessions.length === 0) {
+      throw new Error(`No sessions found in ${filePath}`);
+    }
+
     // For single file, we take the last session or most relevant
     const session = sessions[sessions.length - 1];
 
     // Update memory
     for (const s of sessions) {
+      if (!s.sessionId) {
+        console.warn(`[Manager] Skipping session without id from ${filePath}`);
+        continue;
+      }
       await this.applyProjectName(s, filePath);
       this.sessions.set(s.sessionId, s);
       this.persistSession(s);
