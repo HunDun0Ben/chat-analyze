@@ -30,11 +30,10 @@ async function bootstrap(): Promise<void> {
   const watcher = new ChatWatcher(config.watchPaths, manager);
   watcher.start();
 
-  startServer(manager, {
-    port: config.port,
-    host: config.host,
-    exportsDir: config.exportsDir,
-  });
+  await startServer(
+    { manager, exportsDir: config.exportsDir },
+    { port: config.port, host: config.host },
+  );
 
   console.log('[System] Service is ready.');
   console.log(`[System] API: http://${config.host}:${config.port}`);
