@@ -8,66 +8,12 @@ import { CoachService } from '../services/CoachService.js';
 import { ParserOutput, ParseWarning } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
 import { resolveSessionId, stableMessageId } from '../parsing/shared/ids.js';
-
-interface RawSessionMetadata {
-  sessionId?: string;
-  projectHash?: string;
-  startTime?: string;
-  lastUpdated?: string;
-  kind?: string;
-}
-
-type RawContentPart = string | { text?: string };
-
-interface RawUserTurnEvent {
-  id: string;
-  timestamp: string;
-  type: 'user';
-  content: RawContentPart[];
-}
-
-interface RawGeminiTurnEvent {
-  id: string;
-  timestamp: string;
-  type: 'gemini';
-  content: string;
-  thoughts?: Array<{ subject: string; description: string }>;
-  tokens?: {
-    input: number;
-    output: number;
-    cached: number;
-    thoughts: number;
-    tool: number;
-    total: number;
-  };
-  model?: string;
-  toolCalls?: Array<{
-    id: string;
-    name: string;
-    args?: Record<string, unknown>;
-    result?: {
-      functionResponse: { id: string; name: string; response: unknown };
-    };
-    status?: 'success' | 'failure' | 'pending';
-    timestamp: string;
-  }>;
-}
-
-interface RawInfoEvent {
-  id: string;
-  timestamp: string;
-  type: 'info';
-  content: string;
-}
-
-interface RawSetEvent {
-  $set: {
-    lastUpdated?: string;
-    sessionTitle?: string;
-    modelId?: string;
-    [key: string]: unknown;
-  };
-}
+import {
+  describeZodError,
+  jsonlMetadataSchema,
+  jsonlRecordSchema,
+  jsonlSetEventSchema,
+} from './schemas.js';
 
 /**
  * Only metadata keys may be updated by a `$set` record. Anything else (most
@@ -75,13 +21,6 @@ interface RawSetEvent {
  * the session being aggregated.
  */
 const ALLOWED_SET_KEYS = new Set(['lastUpdated', 'sessionTitle', 'modelId']);
-
-type JsonlRecord =
-  | RawSessionMetadata
-  | RawUserTurnEvent
-  | RawGeminiTurnEvent
-  | RawInfoEvent
-  | RawSetEvent;
 
 export class GeminiJsonlParser extends BaseParser {
   constructor(coachService: CoachService) {
@@ -94,35 +33,14 @@ export class GeminiJsonlParser extends BaseParser {
     // repeated parses of the same file are byte-for-byte identical.
     const fallbackTimestamp = new Date(source.stat.mtimeMs).toISOString();
     const warnings: ParseWarning[] = [];
-    const session: Partial<AnalyzedSession> = {
-      sessionId: 'unknown',
-      projectName: 'Imported', // Default
-      sessionTitle: 'Untitled Session', // Default
-      projectHash: '',
-      modelId: 'unknown',
-      category: undefined,
-      provider: 'gemini',
-      startTime: fallbackTimestamp,
-      lastUpdated: fallbackTimestamp,
-      expressionQuality: {
-        score: 0,
-        ambiguities: [],
-        suggestion: '',
-      },
-      stats: {
-        turns: 0,
-        userTurns: 0,
-        geminiTurns: 0,
-        corrections: 0,
-        toolChain: [],
-        tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 },
-      },
-      messages: [],
-    };
 
     const messages: SessionMessage[] = [];
     let userTurns = 0;
     let geminiTurns = 0;
+    let projectHash = '';
+    let startTime = fallbackTimestamp;
+    let lastUpdated = fallbackTimestamp;
+    let modelId = 'unknown';
     const toolChain: string[] = [];
     const tokenUsage = { input: 0, output: 0, thoughts: 0, total: 0 };
 
@@ -136,114 +54,123 @@ export class GeminiJsonlParser extends BaseParser {
       lineNumber++;
       if (line.trim().length === 0) continue;
 
+      let raw: unknown;
       try {
-        const record: JsonlRecord = JSON.parse(line);
-
-        if (isFirstLine) {
-          // First line is session metadata
-          const meta = record as RawSessionMetadata;
-          if (meta.sessionId) metadataSessionId = meta.sessionId;
-          if (meta.projectHash) session.projectHash = meta.projectHash;
-          if (meta.startTime) session.startTime = meta.startTime;
-          if (meta.lastUpdated) session.lastUpdated = meta.lastUpdated;
-          isFirstLine = false;
-          continue; // Process next line
-        }
-
-        if ('$set' in record) {
-          // Metadata-only update: ignore every key outside the whitelist
-          // instead of blind Object.assign.
-          const setEvent = record.$set;
-          for (const key of Object.keys(setEvent)) {
-            if (!ALLOWED_SET_KEYS.has(key)) ignoredSetKeys++;
-          }
-          if (typeof setEvent.lastUpdated === 'string') {
-            session.lastUpdated = setEvent.lastUpdated;
-          }
-          if (typeof setEvent.sessionTitle === 'string') {
-            explicitTitle = setEvent.sessionTitle;
-          }
-          if (typeof setEvent.modelId === 'string') {
-            session.modelId = setEvent.modelId;
-          }
-        } else if ('type' in record) {
-          const rawMessage = record as
-            | RawUserTurnEvent
-            | RawGeminiTurnEvent
-            | RawInfoEvent;
-
-          const msg: SessionMessage = {
-            id: rawMessage.id || stableMessageId(filePath, lineNumber),
-            timestamp: rawMessage.timestamp || fallbackTimestamp,
-            type: rawMessage.type,
-            content: '',
-          };
-
-          if (rawMessage.type === 'user') {
-            msg.content = Array.isArray(rawMessage.content)
-              ? rawMessage.content
-                  .map((part) =>
-                    typeof part === 'string' ? part : (part.text ?? ''),
-                  )
-                  .join('\n')
-              : '';
-            userTurns++;
-          } else if (rawMessage.type === 'gemini') {
-            msg.content = rawMessage.content;
-            msg.model = rawMessage.model;
-            geminiTurns++;
-
-            if (rawMessage.thoughts && rawMessage.thoughts.length > 0) {
-              msg.thoughts = rawMessage.thoughts.map((t) => ({
-                subject: t.subject,
-                description: t.description,
-                timestamp: rawMessage.timestamp, // Assuming thought timestamp is message timestamp
-              }));
-            }
-
-            if (rawMessage.toolCalls && rawMessage.toolCalls.length > 0) {
-              msg.toolCalls = rawMessage.toolCalls.map((tc) => {
-                const toolCall: ToolCall = {
-                  id: tc.id,
-                  name: tc.name,
-                  args: tc.args || {},
-                  status: tc.status || 'pending',
-                  timestamp: tc.timestamp,
-                };
-                if (tc.result && tc.result.functionResponse) {
-                  toolCall.result = tc.result.functionResponse.response;
-                  toolCall.status = 'success'; // Assume success if result is present
-                }
-                toolChain.push(tc.name);
-                return toolCall;
-              });
-            }
-
-            if (rawMessage.tokens) {
-              tokenUsage.input += rawMessage.tokens.input || 0;
-              tokenUsage.output += rawMessage.tokens.output || 0;
-              tokenUsage.thoughts += rawMessage.tokens.thoughts || 0;
-              tokenUsage.total += rawMessage.tokens.total || 0;
-            }
-          } else if (rawMessage.type === 'info') {
-            msg.content = rawMessage.content;
-          }
-          messages.push(msg);
-        }
-      } catch (e) {
+        raw = JSON.parse(line);
+      } catch (error) {
         if (warnings.length < 100) {
           warnings.push({
             filePath,
-            reason: `line ${lineNumber}: ${(e as Error).message}`,
+            reason: `line ${lineNumber}: ${(error as Error).message}`,
           });
         }
+        continue;
       }
-    }
 
-    session.sessionId = resolveSessionId(
-      { sessionId: metadataSessionId },
-      filePath,
-    );
+      if (isFirstLine) {
+        const meta = jsonlMetadataSchema.safeParse(raw);
+        if (!meta.success) {
+          warnings.push({
+            filePath,
+            reason: `line ${lineNumber}: ${describeZodError(meta.error)}`,
+          });
+        } else {
+          if (meta.data.sessionId) metadataSessionId = meta.data.sessionId;
+          if (meta.data.projectHash) projectHash = meta.data.projectHash;
+          if (meta.data.startTime) startTime = meta.data.startTime;
+          if (meta.data.lastUpdated) lastUpdated = meta.data.lastUpdated;
+        }
+        isFirstLine = false;
+        continue;
+      }
+
+      const setParsed = jsonlSetEventSchema.safeParse(raw);
+      if (setParsed.success) {
+        // Metadata-only update: ignore every key outside the whitelist
+        // instead of blind Object.assign.
+        const setEvent = setParsed.data.$set;
+        for (const key of Object.keys(setEvent)) {
+          if (!ALLOWED_SET_KEYS.has(key)) ignoredSetKeys++;
+        }
+        if (typeof setEvent.lastUpdated === 'string') {
+          lastUpdated = setEvent.lastUpdated;
+        }
+        if (typeof setEvent.sessionTitle === 'string') {
+          explicitTitle = setEvent.sessionTitle;
+        }
+        if (typeof setEvent.modelId === 'string') {
+          modelId = setEvent.modelId;
+        }
+        continue;
+      }
+
+      const parsed = jsonlRecordSchema.safeParse(raw);
+      if (!parsed.success) {
+        if (warnings.length < 100) {
+          warnings.push({
+            filePath,
+            reason: `line ${lineNumber}: ${describeZodError(parsed.error)}`,
+          });
+        }
+        continue;
+      }
+
+      const record = parsed.data;
+      const msg: SessionMessage = {
+        id: record.id || stableMessageId(filePath, lineNumber),
+        timestamp: record.timestamp || fallbackTimestamp,
+        type: record.type,
+        content: '',
+      };
+
+      if (record.type === 'user') {
+        msg.content = (record.content ?? [])
+          .map((part) => (typeof part === 'string' ? part : (part.text ?? '')))
+          .join('\n');
+        userTurns++;
+      } else if (record.type === 'gemini') {
+        msg.content = record.content ?? '';
+        msg.model = record.model;
+        geminiTurns++;
+
+        if (record.thoughts && record.thoughts.length > 0) {
+          msg.thoughts = record.thoughts.map((thought) => ({
+            subject: thought.subject ?? '',
+            description: thought.description ?? '',
+            timestamp: msg.timestamp,
+          }));
+        }
+
+        if (record.toolCalls && record.toolCalls.length > 0) {
+          msg.toolCalls = record.toolCalls.map((tc) => {
+            const toolCall: ToolCall = {
+              id: tc.id ?? '',
+              name: tc.name,
+              args: tc.args ?? {},
+              status: tc.status ?? 'pending',
+              timestamp: tc.timestamp ?? msg.timestamp,
+            };
+            if (tc.result?.functionResponse) {
+              toolCall.result = tc.result.functionResponse.response;
+              toolCall.status = 'success'; // Assume success if result is present
+            }
+            toolChain.push(tc.name);
+            return toolCall;
+          });
+        }
+
+        if (record.tokens) {
+          tokenUsage.input += record.tokens.input ?? 0;
+          tokenUsage.output += record.tokens.output ?? 0;
+          tokenUsage.thoughts += record.tokens.thoughts ?? 0;
+          tokenUsage.total += record.tokens.total ?? 0;
+        }
+      } else {
+        msg.content = record.content ?? '';
+      }
+
+      messages.push(msg);
+    }
 
     if (ignoredSetKeys > 0) {
       console.warn(
@@ -251,46 +178,53 @@ export class GeminiJsonlParser extends BaseParser {
       );
     }
 
-    session.messages = messages;
-    session.stats!.turns = messages.length; // messages.length includes all types, not just user/gemini
-    session.stats!.userTurns = userTurns;
-    session.stats!.geminiTurns = geminiTurns;
-    session.stats!.toolChain = toolChain;
-    session.stats!.tokenUsage = tokenUsage;
-
     const geminiMsgs = messages.filter((m) => m.type === 'gemini');
     if (geminiMsgs.length > 0) {
-      session.modelId = geminiMsgs[geminiMsgs.length - 1].model || 'unknown';
+      modelId = geminiMsgs[geminiMsgs.length - 1].model || 'unknown';
     }
 
-    // Derive sessionTitle
-    if (session.messages.length > 0) {
-      const firstUserMessage = session.messages.find((m) => m.type === 'user');
-      session.sessionTitle =
-        explicitTitle ||
-        firstUserMessage?.content?.substring(0, 50) ||
-        'Untitled Session';
-    } else {
-      session.sessionTitle = explicitTitle || 'Untitled Session';
-    }
+    const firstUserMessage = messages.find((m) => m.type === 'user');
+    const sessionTitle =
+      explicitTitle ||
+      firstUserMessage?.content?.substring(0, 50) ||
+      'Untitled Session';
 
-    // CoachService analysis
-    const firstPrompt = messages.find((m) => m.type === 'user')?.content || '';
+    const firstPrompt = firstUserMessage?.content || '';
     const correctionCount = this.coachService.countCorrections(
       messages.filter((m) => m.type === 'user'),
       messages,
     );
-    session.expressionQuality = {
-      score: this.coachService.calculateQualityScore(
-        correctionCount,
-        firstPrompt,
-      ),
-      ambiguities: this.coachService.detectAmbiguities(firstPrompt),
-      suggestion: this.coachService.generateSuggestion(firstPrompt),
-    };
-    session.category = this.coachService.detectCategory(firstPrompt, toolChain);
-    session.filePath = filePath;
 
-    return { sessions: [session as AnalyzedSession], warnings };
+    const session: AnalyzedSession = {
+      sessionId: resolveSessionId({ sessionId: metadataSessionId }, filePath),
+      projectName: 'Imported', // Default, resolved later by ProjectResolver
+      sessionTitle,
+      projectHash,
+      modelId,
+      category: this.coachService.detectCategory(firstPrompt, toolChain),
+      provider: 'gemini',
+      startTime,
+      lastUpdated,
+      expressionQuality: {
+        score: this.coachService.calculateQualityScore(
+          correctionCount,
+          firstPrompt,
+        ),
+        ambiguities: this.coachService.detectAmbiguities(firstPrompt),
+        suggestion: this.coachService.generateSuggestion(firstPrompt),
+      },
+      stats: {
+        turns: messages.length, // includes info messages, unlike the JSON parser
+        userTurns,
+        geminiTurns,
+        corrections: correctionCount,
+        toolChain,
+        tokenUsage,
+      },
+      messages,
+      filePath,
+    };
+
+    return { sessions: [session], warnings };
   }
 }
