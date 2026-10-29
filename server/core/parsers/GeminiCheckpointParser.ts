@@ -1,10 +1,10 @@
-import crypto from 'node:crypto';
 import {
   AnalyzedSession,
   SessionMessage,
   ToolCall,
 } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
+import { stableSessionId } from '../parsing/shared/ids.js';
 
 interface GeminiPart {
   text?: string;
@@ -115,7 +115,7 @@ export class GeminiCheckpointParser extends BaseParser {
     );
 
     const projectName = this.extractProjectName(fileName || 'Unknown');
-    const sessionId = this.generateSessionId(filePath);
+    const sessionId = stableSessionId(filePath);
 
     // 优先使用完整的文件名（已解码）作为 sessionTitle
     let sessionTitle = (fileName || 'checkpoint')
@@ -202,11 +202,5 @@ export class GeminiCheckpointParser extends BaseParser {
     }
 
     return name || 'Imported';
-  }
-
-  private generateSessionId(filePath: string): string {
-    const hash = crypto.createHash('sha256');
-    hash.update(filePath);
-    return hash.digest('hex').substring(0, 32);
   }
 }

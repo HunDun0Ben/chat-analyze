@@ -53,11 +53,13 @@ export class SessionParser {
     // Support ChatGPT export arrays
     if (Array.isArray(sessionData)) {
       const results: AnalyzedSession[] = [];
-      for (const item of sessionData) {
+      for (const [index, item] of sessionData.entries()) {
         try {
           const parser = this.getParser(item);
           if (parser) {
-            results.push(await parser.analyze(item, { filePath, fileName }));
+            results.push(
+              await parser.analyze(item, { filePath, fileName, index }),
+            );
           }
         } catch {
           // Silently skip invalid entries in arrays (common in ChatGPT exports)

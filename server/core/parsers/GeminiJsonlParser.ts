@@ -8,6 +8,7 @@ import {
 } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
 import { CoachService } from '../services/CoachService.js';
+import { resolveSessionId } from '../parsing/shared/ids.js';
 
 interface RawSessionMetadata {
   sessionId?: string;
@@ -17,11 +18,13 @@ interface RawSessionMetadata {
   kind?: string;
 }
 
+type RawContentPart = string | { text?: string };
+
 interface RawUserTurnEvent {
   id: string;
   timestamp: string;
   type: 'user';
-  content: Array<{ text: string }>;
+  content: RawContentPart[];
 }
 
 interface RawGeminiTurnEvent {
@@ -61,9 +64,18 @@ interface RawInfoEvent {
 interface RawSetEvent {
   $set: {
     lastUpdated?: string;
-    // Potentially other fields can be updated
+    sessionTitle?: string;
+    modelId?: string;
+    [key: string]: unknown;
   };
 }
+
+/**
+ * Only metadata keys may be updated by a `$set` record. Anything else (most
+ * importantly `messages` / `sessionId`) would let a malformed log line rewrite
+ * the session being aggregated.
+ */
+const ALLOWED_SET_KEYS = new Set(['lastUpdated', 'sessionTitle', 'modelId']);
 
 type JsonlRecord =
   | RawSessionMetadata
@@ -121,6 +133,9 @@ export class GeminiJsonlParser extends BaseParser {
     });
 
     let isFirstLine = true;
+    let metadataSessionId: string | undefined;
+    let ignoredSetKeys = 0;
+    let explicitTitle: string | undefined;
 
     for await (const line of rl) {
       if (line.trim().length === 0) continue;
@@ -131,7 +146,7 @@ export class GeminiJsonlParser extends BaseParser {
         if (isFirstLine) {
           // First line is session metadata
           const meta = record as RawSessionMetadata;
-          if (meta.sessionId) session.sessionId = meta.sessionId;
+          if (meta.sessionId) metadataSessionId = meta.sessionId;
           if (meta.projectHash) session.projectHash = meta.projectHash;
           if (meta.startTime) session.startTime = meta.startTime;
           if (meta.lastUpdated) session.lastUpdated = meta.lastUpdated;
@@ -140,8 +155,21 @@ export class GeminiJsonlParser extends BaseParser {
         }
 
         if ('$set' in record) {
-          // Handle $set events
-          Object.assign(session, (record as RawSetEvent).$set);
+          // Metadata-only update: ignore every key outside the whitelist
+          // instead of blind Object.assign.
+          const setEvent = record.$set;
+          for (const key of Object.keys(setEvent)) {
+            if (!ALLOWED_SET_KEYS.has(key)) ignoredSetKeys++;
+          }
+          if (typeof setEvent.lastUpdated === 'string') {
+            session.lastUpdated = setEvent.lastUpdated;
+          }
+          if (typeof setEvent.sessionTitle === 'string') {
+            explicitTitle = setEvent.sessionTitle;
+          }
+          if (typeof setEvent.modelId === 'string') {
+            session.modelId = setEvent.modelId;
+          }
         } else if ('type' in record) {
           const rawMessage = record as
             | RawUserTurnEvent
@@ -156,10 +184,13 @@ export class GeminiJsonlParser extends BaseParser {
           };
 
           if (rawMessage.type === 'user') {
-            msg.content =
-              rawMessage.content
-                .map((part) => (typeof part === 'string' ? part : part.text))
-                .join('\\n') || '';
+            msg.content = Array.isArray(rawMessage.content)
+              ? rawMessage.content
+                  .map((part) =>
+                    typeof part === 'string' ? part : (part.text ?? ''),
+                  )
+                  .join('\n')
+              : '';
             userTurns++;
           } else if (rawMessage.type === 'gemini') {
             msg.content = rawMessage.content;
@@ -212,6 +243,17 @@ export class GeminiJsonlParser extends BaseParser {
     rl.close();
     fileStream.close();
 
+    session.sessionId = resolveSessionId(
+      { sessionId: metadataSessionId },
+      filePath,
+    );
+
+    if (ignoredSetKeys > 0) {
+      console.warn(
+        `[GeminiJsonlParser] Ignored ${ignoredSetKeys} unsupported $set key(s) in ${filePath}`,
+      );
+    }
+
     session.messages = messages;
     session.stats!.turns = messages.length; // messages.length includes all types, not just user/gemini
     session.stats!.userTurns = userTurns;
@@ -228,9 +270,11 @@ export class GeminiJsonlParser extends BaseParser {
     if (session.messages.length > 0) {
       const firstUserMessage = session.messages.find((m) => m.type === 'user');
       session.sessionTitle =
-        firstUserMessage?.content?.substring(0, 50) || 'Untitled Session';
+        explicitTitle ||
+        firstUserMessage?.content?.substring(0, 50) ||
+        'Untitled Session';
     } else {
-      session.sessionTitle = 'Untitled Session';
+      session.sessionTitle = explicitTitle || 'Untitled Session';
     }
 
     // CoachService analysis

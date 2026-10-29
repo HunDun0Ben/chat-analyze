@@ -27,7 +27,8 @@ export class DiscoveryService {
 
     for (const watchPath of watchPaths) {
       try {
-        const files = await this.collectFiles(watchPath);
+        const files: string[] = [];
+        await this.walk(watchPath, files);
 
         for (const filePath of files) {
           if (seen.has(filePath)) continue;
@@ -48,38 +49,18 @@ export class DiscoveryService {
   }
 
   /**
-   * Collect session files from the watch root: root-level files plus every
-   * non-ignored subdirectory (recursively).
+   * Recursively collect session files. Ignored directories are skipped at
+   * every level; an unreadable subdirectory is logged and skipped without
+   * aborting the rest of the scan.
    */
-  private async collectFiles(watchPath: string): Promise<string[]> {
-    const entries = await fs.readdir(watchPath, { withFileTypes: true });
-    const files: string[] = [];
-
-    for (const entry of entries) {
-      const fullPath = path.join(watchPath, entry.name);
-
-      if (entry.isDirectory()) {
-        if (isIgnoredDirName(entry.name)) continue;
-        await this.collectSessions(fullPath, files);
-      } else if (entry.isFile() && this.isSessionFile(entry.name)) {
-        files.push(fullPath);
-      }
-    }
-
-    return files;
-  }
-
-  /**
-   * Recursively collect session files from a directory.
-   */
-  private async collectSessions(dir: string, files: string[]) {
+  private async walk(dir: string, files: string[]): Promise<void> {
     try {
       const entries = await fs.readdir(dir, { withFileTypes: true });
       for (const entry of entries) {
         const fullPath = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           if (isIgnoredDirName(entry.name)) continue;
-          await this.collectSessions(fullPath, files);
+          await this.walk(fullPath, files);
         } else if (entry.isFile() && this.isSessionFile(entry.name)) {
           files.push(fullPath);
         }

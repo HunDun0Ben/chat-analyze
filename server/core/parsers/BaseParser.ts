@@ -4,6 +4,8 @@ import { CoachService } from '../services/CoachService.js';
 export interface ParserOptions {
   filePath: string;
   fileName?: string;
+  /** Position inside a multi-session file (e.g. a ChatGPT export array). */
+  index?: number;
 }
 
 export abstract class BaseParser {

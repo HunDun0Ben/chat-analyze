@@ -4,6 +4,7 @@ import {
   ToolCall,
 } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
+import { resolveSessionId } from '../parsing/shared/ids.js';
 
 export class ChatGPTParser extends BaseParser {
   async analyze(
@@ -159,7 +160,7 @@ export class ChatGPTParser extends BaseParser {
     );
 
     const result: AnalyzedSession = {
-      sessionId: (s.conversation_id as string) || (s.id as string),
+      sessionId: resolveSessionId(s, options.filePath, options.index),
       projectName: 'ChatGPT Import',
       sessionTitle: options.fileName || (s.title as string) || 'ChatGPT Chat',
       projectHash: 'chatgpt-import',

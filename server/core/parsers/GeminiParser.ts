@@ -1,5 +1,6 @@
 import { AnalyzedSession, SessionMessage } from '../../types/index.js';
 import { BaseParser, ParserOptions } from './BaseParser.js';
+import { resolveSessionId } from '../parsing/shared/ids.js';
 
 export class GeminiParser extends BaseParser {
   async analyze(
@@ -92,7 +93,7 @@ export class GeminiParser extends BaseParser {
       (s.projectName as string) || (s.projectHash as string) || 'Unknown';
 
     return {
-      sessionId: (s.sessionId as string) || '',
+      sessionId: resolveSessionId(s, filePath),
       projectName,
       sessionTitle: firstPrompt.substring(0, 50),
       projectHash: (s.projectHash as string) || '',
