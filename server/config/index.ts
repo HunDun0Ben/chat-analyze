@@ -20,7 +20,7 @@ export interface ServerConfig {
   persistence: 'off' | 'sqlite';
 }
 
-export interface LoadConfigOptions {
+interface LoadConfigOptions {
   /** Environment to read. Defaults to `process.env`; injectable for tests. */
   env?: NodeJS.ProcessEnv;
   /** Base directory for relative watch paths. Defaults to `process.cwd()`. */

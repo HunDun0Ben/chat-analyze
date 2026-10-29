@@ -1,5 +1,5 @@
 /** Hard limit for a graceful shutdown before the process is forced out. */
-export const SHUTDOWN_TIMEOUT_MS = 10_000;
+const SHUTDOWN_TIMEOUT_MS = 10_000;
 
 export interface ShutdownTargets {
   watcher: { stop(): Promise<void> | void };
@@ -59,7 +59,7 @@ export async function shutdownComponents(
   logger.log('[Shutdown] All components closed.');
 }
 
-export interface ShutdownHandlerOptions {
+interface ShutdownHandlerOptions {
   targets: ShutdownTargets;
   timeoutMs?: number;
   logger?: ShutdownLogger;

@@ -36,10 +36,7 @@ export function findWatchRoot(
  * value returned by DiscoveryService. Root-level files are treated as
  * manual imports; nested files use their top-level directory name.
  */
-export function genericProjectName(
-  filePath: string,
-  watchRoot: string,
-): string {
+function genericProjectName(filePath: string, watchRoot: string): string {
   const relative = path.relative(watchRoot, filePath);
   const dir = path.dirname(relative);
   const parts = dir === '.' ? [] : dir.split(path.sep);

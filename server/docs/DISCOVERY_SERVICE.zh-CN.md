@@ -8,7 +8,7 @@
 2. **项目名解析 (Project Resolution)**：为已解析的会话确定项目归属。这一层**与 Provider 相关**。
 
 ```
-watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectResolver
+watchPaths ──► DiscoveryService ──► SessionAnalyzer ──► ProjectResolver
                 (只发现文件)        (识别 provider)    (最终 projectName)
 ```
 
@@ -24,7 +24,7 @@ watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectR
 4. 结果按绝对路径去重（允许多个监听路径相互重叠），并排序以保证输出稳定。
 5. 某个监听路径或子目录读取失败时只记录日志，不会中断其余路径。
 
-`DiscoveryResult` 包含 `filePath`、`watchRoot` 和**通用** `projectName`。通用名称仅作为工具脚本的兜底；最终名称由解析后的 `ProjectResolver` 产生。
+`DiscoveryResult` 只包含 `filePath` 与 `watchRoot`。这一层不做任何项目名推断；最终名称由解析后的 `ProjectResolver` 产生。
 
 ## 3. 项目名解析 (`ProjectResolver`)
 
@@ -53,7 +53,7 @@ watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectR
 
 ## 5. 扩展新 Provider
 
-1. 在 `server/core/parsers/` 下新增解析器，并在 `SessionParser`（`server/core/parser.ts`）中注册路由。
+1. 在 `server/core/parsers/` 下新增解析器，并在 `server/core/parsing/registry.ts` 的 `PARSER_REGISTRATIONS` 中追加注册项。
 2. 在 `server/core/services/discovery/projectNaming.ts` 中新增命名函数。
 3. 在 `ProjectResolver.resolve` 中接入该 Provider，并在 `ProjectResolver.isPlaceholder` 中补充占位规则。
 4. 为解析器、命名规则以及「启动扫描 / watcher 一致性」补充测试。

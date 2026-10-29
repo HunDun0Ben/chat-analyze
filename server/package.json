@@ -6,10 +6,10 @@
     "dev": "tsx index.ts",
     "lint": "eslint .",
     "build": "tsc && cp api/prompts/*.md dist/api/prompts/",
-    "test": "vitest run",
-    "test:parser": "tsx __tests__/test-parser.ts"
+    "test": "vitest run"
   },
   "dependencies": {
+    "@chat-analyze/shared": "0.0.0",
     "better-sqlite3": "^12.8.0",
     "chokidar": "^5.0.0",
     "cors": "^2.8.6",
@@ -24,7 +24,6 @@
     "@types/node": "^20.19.37",
     "@types/supertest": "^7.2.1",
     "eslint": "^9.39.4",
-    "eslint-plugin-header": "^3.1.1",
     "fast-xml-parser": "^5.11.2",
     "globals": "^17.4.0",
     "supertest": "^7.3.1",

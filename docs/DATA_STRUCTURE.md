@@ -49,4 +49,6 @@ export interface AnalyzedSession {
 
 ## 2. 存储设计 (Storage Schema)
 
-SQLite 数据库（`chat_analyze.db`）表结构镜像了上述核心字段，以加速全文检索与特定条件查询。统计汇总则在内存中实时生成。
+SQLite 数据库（默认 `server/chat_analyze.db`）的表结构镜像了上述核心字段，
+但**默认不写库**：`PERSISTENCE=off` 时进程不会打开数据库文件，统计全部在内存中实时生成。
+需要持久化时设置 `PERSISTENCE=sqlite`；表结构包含 `filePath` 列与对应索引，为将来的增量缓存预留。

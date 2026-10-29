@@ -56,13 +56,3 @@ export const CardTitle = ({
     {children}
   </h3>
 );
-
-export const CardDescription = ({
-  children,
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLParagraphElement>) => (
-  <p className={cn('text-sm text-muted-foreground', className)} {...props}>
-    {children}
-  </p>
-);

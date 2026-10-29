@@ -10,9 +10,9 @@ const PROMPTS_DIR = path.join(
   'prompts',
 );
 
-export type PromptKind = 'coach-audit' | 'skill-extraction';
+type PromptKind = 'coach-audit' | 'skill-extraction';
 
-export interface PromptContext {
+interface PromptContext {
   /** Project label shown in the instruction block. */
   project?: string;
   /** Absolute export directory the skill agent may write to. */
@@ -61,7 +61,7 @@ function render(template: string, vars: PromptVars): string {
  * Templates live in `api/prompts/*.md` so prompt changes are reviewable as
  * plain text; the build copies them next to the compiled JS.
  */
-export function buildPrompt(kind: PromptKind, context: PromptContext): string {
+function buildPrompt(kind: PromptKind, context: PromptContext): string {
   const sessionsXml = context.sessions
     .map((session) => buildSessionXmlElement(session))
     .join('\n');

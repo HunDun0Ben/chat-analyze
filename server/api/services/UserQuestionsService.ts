@@ -5,7 +5,7 @@ import type {
 } from '../../types/index.js';
 import { formatSessionTitle } from '../prompts/format.js';
 
-export interface UserQuestionFilters {
+interface UserQuestionFilters {
   project?: string;
   category?: TaskCategory;
   minScore?: number;

@@ -12,7 +12,7 @@ concerns:
    This step is provider-specific.
 
 ```
-watchPaths ──► DiscoveryService ──► SessionParser ──► ProjectResolver
+watchPaths ──► DiscoveryService ──► SessionAnalyzer ──► ProjectResolver
                 (files only)        (provider id)     (final projectName)
 ```
 
@@ -33,9 +33,9 @@ how it was loaded.
 5. A failure while reading one watch path or subdirectory is logged and does
    not abort the remaining paths.
 
-`DiscoveryResult` contains `filePath`, `watchRoot`, and a **generic**
-`projectName`. The generic name is only a fallback used by tooling; the final
-name is produced by `ProjectResolver` after parsing.
+`DiscoveryResult` contains only `filePath` and `watchRoot`. No project name
+is inferred at this layer; the final name is produced by `ProjectResolver`
+after parsing.
 
 ## 3. Project Resolution (`ProjectResolver`)
 
@@ -75,7 +75,7 @@ corrupted files).
 ## 5. Extending a Provider
 
 1. Add a parser under `server/core/parsers/` and register it in
-   `SessionParser` (`server/core/parser.ts`).
+   `PARSER_REGISTRATIONS` (`server/core/parsing/registry.ts`).
 2. Add a naming function in
    `server/core/services/discovery/projectNaming.ts`.
 3. Route the provider in `ProjectResolver.resolve` and add its placeholder rule

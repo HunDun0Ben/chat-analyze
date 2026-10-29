@@ -111,8 +111,4 @@ export class SessionAnalyzer {
     }
     return null;
   }
-
-  getCoachService(): CoachService {
-    return this.coachService;
-  }
 }
