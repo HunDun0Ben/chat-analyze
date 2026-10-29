@@ -12,11 +12,16 @@ async function bootstrap(): Promise<void> {
   const config = loadConfig();
   logResolvedConfig(config);
 
+  // Persistence is dormant by default: the SQLite design is kept, but no
+  // write happens until PERSISTENCE=sqlite.
+  const storage =
+    config.persistence === 'sqlite' ? new SessionStorage(config.dbPath) : null;
+
   // Filesystem is the source of truth: index first, then watch for changes.
   const manager = new SessionManager(
     config.watchPaths,
     new SessionAnalyzer(),
-    new SessionStorage(config.dbPath),
+    storage,
     new DiscoveryService(),
     new ProjectResolver(),
   );

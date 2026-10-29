@@ -1,9 +1,10 @@
 import Database from 'better-sqlite3';
-import { AnalyzedSession } from '../types/index.js';
+import type { AnalyzedSession } from '../types/index.js';
+import type { SessionStore } from './SessionStore.js';
 import path from 'node:path';
 import fs from 'node:fs';
 
-export class SessionStorage {
+export class SessionStorage implements SessionStore {
   private db: Database.Database;
 
   constructor(dbPath: string) {
@@ -20,6 +21,7 @@ export class SessionStorage {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS sessions (
         sessionId TEXT PRIMARY KEY,
+        filePath TEXT,
         projectName TEXT,
         sessionTitle TEXT,
         modelId TEXT,
@@ -35,17 +37,29 @@ export class SessionStorage {
       CREATE INDEX IF NOT EXISTS idx_category ON sessions(category);
       CREATE INDEX IF NOT EXISTS idx_project ON sessions(projectName);
     `);
+
+    // Older databases predate the filePath column.
+    const columns = this.db.prepare('PRAGMA table_info(sessions)').all() as {
+      name: string;
+    }[];
+    if (!columns.some((column) => column.name === 'filePath')) {
+      this.db.exec('ALTER TABLE sessions ADD COLUMN filePath TEXT');
+    }
+    this.db.exec(
+      'CREATE INDEX IF NOT EXISTS idx_file_path ON sessions(filePath)',
+    );
   }
 
   saveSession(session: AnalyzedSession) {
     const stmt = this.db.prepare(`
       INSERT OR REPLACE INTO sessions (
-        sessionId, projectName, sessionTitle, modelId, category, provider, startTime, lastUpdated, score, turns, tokensTotal, data
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        sessionId, filePath, projectName, sessionTitle, modelId, category, provider, startTime, lastUpdated, score, turns, tokensTotal, data
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     stmt.run(
       session.sessionId,
+      session.filePath || null,
       session.projectName,
       session.sessionTitle || null,
       session.modelId,
@@ -58,6 +72,13 @@ export class SessionStorage {
       session.stats.tokenUsage.total,
       JSON.stringify(session),
     );
+  }
+
+  deleteByFilePath(filePath: string): number {
+    const result = this.db
+      .prepare('DELETE FROM sessions WHERE filePath = ?')
+      .run(filePath);
+    return result.changes;
   }
 
   getSessions(
@@ -96,6 +117,7 @@ export class SessionStorage {
     return rows.map((row) => row.projectName);
   }
 
+  /** Returns the most recent 30 days, ascending. */
   getStatsTimeline(): { date: string; avgScore: number }[] {
     const sql = `
       SELECT 
@@ -103,17 +125,19 @@ export class SessionStorage {
         AVG(score) as avgScore
       FROM sessions
       GROUP BY date
-      ORDER BY date ASC
+      ORDER BY date DESC
       LIMIT 30
     `;
     const rows = this.db.prepare(sql).all() as {
       date: string;
       avgScore: number;
     }[];
-    return rows.map((row) => ({
-      date: row.date,
-      avgScore: Math.round(row.avgScore),
-    }));
+    return rows
+      .map((row) => ({
+        date: row.date,
+        avgScore: Math.round(row.avgScore),
+      }))
+      .reverse();
   }
 
   getModelStats(): {

@@ -8,6 +8,7 @@ import {
   formatSessionTitle,
 } from './api/prompts/format.js';
 import { errorHandler } from './api/middleware/errorHandler.js';
+import { StatsService } from './core/stats/StatsService.js';
 import { parseProjectsQuery, parseUserQuestionsQuery } from './api/query.js';
 
 const DEFAULT_CORS_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
@@ -45,6 +46,7 @@ export interface AppDeps {
  */
 export function createApp({ manager, exportsDir }: AppDeps): express.Express {
   const app = express();
+  const stats = new StatsService();
 
   app.use(cors({ origin: getCorsOrigins() }));
   app.use(express.json());
@@ -372,47 +374,7 @@ Do not explore the codebase. Work only with the session index, session files, an
   });
 
   app.get('/api/user-questions/stats', async (req, res) => {
-    const sessions = manager.getAllSessions();
-    const statsMap: Record<
-      string,
-      {
-        projectName: string;
-        sessionCount: number;
-        avgScore: number;
-        totalQuestions: number;
-        totalScore: number;
-      }
-    > = {};
-
-    sessions.forEach((s) => {
-      if (!statsMap[s.projectName]) {
-        statsMap[s.projectName] = {
-          projectName: s.projectName,
-          sessionCount: 0,
-          avgScore: 0,
-          totalQuestions: 0,
-          totalScore: 0,
-        };
-      }
-      const userQCount = s.messages.filter((m) => m.type === 'user').length;
-      if (userQCount > 0) {
-        statsMap[s.projectName].sessionCount++;
-        statsMap[s.projectName].totalQuestions += userQCount;
-        statsMap[s.projectName].totalScore += s.expressionQuality.score;
-      }
-    });
-
-    const result = Object.values(statsMap)
-      .filter((stat) => stat.sessionCount > 0)
-      .map((stat) => ({
-        projectName: stat.projectName,
-        sessionCount: stat.sessionCount,
-        totalQuestions: stat.totalQuestions,
-        avgScore: Math.round(stat.totalScore / stat.sessionCount),
-      }))
-      .sort((a, b) => b.totalQuestions - a.totalQuestions);
-
-    res.json(result);
+    res.json(stats.byProject(manager.getAllSessions()));
   });
 
   // --- Session API ---
@@ -455,62 +417,11 @@ Do not explore the codebase. Work only with the session index, session files, an
   });
 
   app.get('/api/stats/timeline', async (req, res) => {
-    const sessions = manager.getAllSessions();
-    const groups: Record<string, { totalScore: number; count: number }> = {};
-
-    sessions.forEach((s) => {
-      const date = s.startTime.split('T')[0];
-      if (!groups[date]) groups[date] = { totalScore: 0, count: 0 };
-      groups[date].totalScore += s.expressionQuality.score;
-      groups[date].count++;
-    });
-
-    const timeline = Object.entries(groups)
-      .map(([date, data]) => ({
-        date,
-        avgScore: Math.round(data.totalScore / data.count),
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date));
-
-    res.json(timeline);
+    res.json(stats.timeline(manager.getAllSessions()));
   });
 
   app.get('/api/stats/models', async (req, res) => {
-    const sessions = manager.getAllSessions();
-    const modelStats: Record<
-      string,
-      {
-        count: number;
-        totalScore: number;
-        totalTokens: number;
-        totalTurns: number;
-      }
-    > = {};
-
-    sessions.forEach((s) => {
-      const mid = s.modelId || 'unknown';
-      if (!modelStats[mid])
-        modelStats[mid] = {
-          count: 0,
-          totalScore: 0,
-          totalTokens: 0,
-          totalTurns: 0,
-        };
-      modelStats[mid].count++;
-      modelStats[mid].totalScore += s.expressionQuality.score;
-      modelStats[mid].totalTokens += s.stats.tokenUsage.total;
-      modelStats[mid].totalTurns += s.stats.turns;
-    });
-
-    const result = Object.entries(modelStats).map(([modelId, data]) => ({
-      modelId,
-      sessionCount: data.count,
-      avgScore: Math.round(data.totalScore / data.count),
-      avgTokens: Math.round(data.totalTokens / data.count),
-      avgTurns: Math.round(data.totalTurns / data.count),
-    }));
-
-    res.json(result);
+    res.json(stats.byModel(manager.getAllSessions()));
   });
 
   app.post('/api/sessions/:id/export-skill', async (req, res) => {
