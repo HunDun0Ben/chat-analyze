@@ -67,7 +67,7 @@
 
 ```bash
 # 快速(单测,约 1 秒)
-npm run test:unit -w @chat-analyze/server
+npm test -w @chat-analyze/server
 
 # 完整(P0-2 之前必须跑)
 npx prettier --write .
@@ -462,7 +462,7 @@ Agent-B: PR-2 (core/parsers、core/services/discovery、core/manager)
 
 **完成标志**
 
-- `npm run test:unit` 一条命令覆盖全部单测
+- `npm test -w @chat-analyze/server` 一条命令覆盖全部单测
 - 文档描述与代码一致
 - `npx knip`(或 `ts-prune`)无重大未使用导出
 
@@ -535,7 +535,7 @@ git commit -m "fix(server): 为缺失 sessionId 的会话生成稳定兜底 id"
 
 ```bash
 npx prettier --write .
-npm run test:unit -w @chat-analyze/server   # 快速循环
+npm test -w @chat-analyze/server   # 快速循环
 npm run preflight                            # 必须全绿
 ```
 
@@ -571,7 +571,7 @@ PR 正文必须包含:**关联 issue(`Closes #`) / 改动清单 / 验证方式 /
 
 | 目的         | 命令                                                  |
 | ------------ | ----------------------------------------------------- |
-| 单测(server) | `npm run test:unit -w @chat-analyze/server`           |
+| 单测(server) | `npm test -w @chat-analyze/server`                    |
 | 单测(watch)  | `npx vitest -w @chat-analyze/server`                  |
 | 类型检查     | `npm run typecheck:server`                            |
 | Lint         | `npm run lint -w @chat-analyze/server`                |
