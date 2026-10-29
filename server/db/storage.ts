@@ -6,9 +6,9 @@ import fs from 'node:fs';
 export class SessionStorage {
   private db: Database.Database;
 
-  constructor(dbPath: string = './chat_analyze.db') {
+  constructor(dbPath: string) {
     const dir = path.dirname(dbPath);
-    if (!fs.existsSync(dir)) {
+    if (dbPath !== ':memory:' && !fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
 

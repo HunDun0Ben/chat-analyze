@@ -2,15 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { SessionManager } from '../core/manager.js';
 import { UserQuestionsSession } from '../types/index.js';
 import {
   buildSessionXmlElement,
   formatSessionTitle,
 } from './prompts/format.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const DEFAULT_CORS_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
 
@@ -27,12 +24,16 @@ function getCorsOrigins(): string[] {
   return configured.length > 0 ? configured : DEFAULT_CORS_ORIGINS;
 }
 
-export function startServer(manager: SessionManager) {
+export interface ServerOptions {
+  port: number;
+  host: string;
+  /** Absolute directory where exported skills are written. */
+  exportsDir: string;
+}
+
+export function startServer(manager: SessionManager, options: ServerOptions) {
   const app = express();
-  const port = Number(process.env.PORT ?? 3001);
-  // Bind to loopback by default: this service exposes private chat data and
-  // must not be reachable from the local network unless explicitly asked.
-  const host = process.env.HOST ?? '127.0.0.1';
+  const { port, host, exportsDir } = options;
 
   app.use(cors({ origin: getCorsOrigins() }));
   app.use(express.json());
@@ -95,7 +96,7 @@ export function startServer(manager: SessionManager) {
           req.query.format === 'prompt' ||
           req.query.includePrompt === 'true'
         ) {
-          const skillsDir = path.resolve(__dirname, '../../exports/skills');
+          const skillsDir = exportsDir;
           const isSkillMode = req.query.mode === 'skill';
 
           const promptHeader = isSkillMode
@@ -548,7 +549,7 @@ Do not explore the codebase. Work only with the session index, session files, an
         'new-skill';
       const skillContent = `# ${skillName}\n\n## Instructions\n${session.expressionQuality.suggestion}\n\n## Tools\n${session.stats.toolChain.join(', ')}\n\n## Examples\n- **Input**: ${session.messages.find((m: { type: string; content: string }) => m.type === 'user')?.content || 'N/A'}\n- **Model**: ${session.modelId}\n`;
 
-      const exportDir = path.resolve(__dirname, '../../exports/skills');
+      const exportDir = exportsDir;
       const exportPath = path.join(
         exportDir,
         `${skillName.replace(/[/\\?%*:|"<>\s]/g, '_')}-${session.sessionId.slice(0, 8)}.md`,
