@@ -70,5 +70,5 @@ curl -s "http://localhost:3001/api/user-questions?project=redis&limit=10&offset=
 
 ## 注意事项
 
-- **Prompt 自定义**: 如果您想修改默认的分析指令，可以修改 `server/api/server.ts` 中的 `promptHeader` 定义。
+- **Prompt 自定义**: 默认分析指令位于 `server/api/prompts/coach-audit.md`，技能提取指令位于 `server/api/prompts/skill-extraction.md`；两者都支持 `{{project}}` / `{{skillsDir}}` / `{{conversation_data}}` 占位符。
 - **无感复盘**: 建议将此类命令配置为 `alias` 或 git hook，实现真正的无感沟通进化。

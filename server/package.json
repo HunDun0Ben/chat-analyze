@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "tsx index.ts",
     "lint": "eslint .",
-    "build": "tsc",
+    "build": "tsc && cp api/prompts/*.md dist/api/prompts/",
     "test": "vitest run",
     "test:parser": "tsx __tests__/test-parser.ts"
   },
