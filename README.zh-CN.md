@@ -75,7 +75,16 @@ npm run dev
 
 ### 环境变量
 
-- `WATCH_PATH`: 默认为 `~/.gemini/tmp`，可根据您的 Gemini CLI 配置进行修改。
+- `WATCH_PATHS`: 监听路径列表，多个路径用 `:` 分隔，支持 `~`。默认 `~/.gemini/tmp`。
+- 示例（同时监听 Gemini 与 ChatGPT 导出目录）：
+
+  ```bash
+  WATCH_PATHS="~/.gemini/tmp:/home/me/Downloads/gpt-conversation/end" npm run dev
+  ```
+
+- 配置优先级：环境变量 > `config.json` > `.env` > 默认路径。
+- `.env` 中的 `WATCH_PATHS` / `WATCH_PATH` 会在仓库根、`server/`、当前工作目录中依次查找；修改后需重启服务。
+- `WATCH` 是已弃用的兼容别名，请使用 `WATCH_PATHS`。
 
 ---
 

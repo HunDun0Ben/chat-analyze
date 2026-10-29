@@ -1,6 +1,7 @@
 import path from 'node:path';
 import os from 'node:os';
 import fs from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { startServer } from './api/server.js';
 import { SessionManager } from './core/manager.js';
 import { SessionParser } from './core/parser.js';
@@ -9,75 +10,142 @@ import { DiscoveryService } from './core/services/DiscoveryService.js';
 import { ProjectResolver } from './core/services/ProjectResolver.js';
 import { ChatWatcher } from './core/watcher.js';
 
+type ConfigSource = 'env' | 'config.json' | '.env' | 'default';
+
+interface WatchPathConfig {
+  paths: string[];
+  source: ConfigSource;
+  sourcePath?: string;
+}
+
+function splitPaths(value: string): string[] {
+  return value
+    .split(':')
+    .map((p) => p.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Candidate directories for `config.json` / `.env`, independent of the
+ * process cwd. Running via `npm run dev -w @chat-analyze/server` sets the cwd
+ * to `server/`, so relying on `process.cwd()` alone misses the repo root.
+ */
+function getConfigSearchDirs(): string[] {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url));
+  return Array.from(
+    new Set([path.resolve(moduleDir, '..'), moduleDir, process.cwd()]),
+  );
+}
+
+function parseConfigFile(configPath: string): string[] | null {
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    if (Array.isArray(config.watchPaths)) {
+      const paths = config.watchPaths.filter(
+        (value: unknown): value is string => typeof value === 'string',
+      );
+      if (paths.length > 0) return paths;
+    }
+    if (typeof config.WATCH_PATHS === 'string') {
+      const paths = splitPaths(config.WATCH_PATHS);
+      if (paths.length > 0) return paths;
+    }
+  } catch (err) {
+    console.warn(
+      `[Config] Failed to parse ${configPath}:`,
+      (err as Error).message,
+    );
+  }
+  return null;
+}
+
+function parseDotEnvFile(envFilePath: string): string[] | null {
+  try {
+    const content = fs.readFileSync(envFilePath, 'utf-8');
+    for (const line of content.split(/\r?\n/)) {
+      const match = line.match(
+        /^\s*(?:export\s+)?(WATCH_PATHS|WATCH_PATH)\s*=\s*(.*)$/,
+      );
+      if (!match) continue;
+
+      let value = match[2].trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+
+      const paths = splitPaths(value);
+      if (paths.length > 0) return paths;
+    }
+  } catch (err) {
+    console.warn(
+      `[Config] Failed to read ${envFilePath}:`,
+      (err as Error).message,
+    );
+  }
+  return null;
+}
+
 /**
  * 加载监听路径配置
  * 优先级: 环境变量 > config.json > .env > 默认路径
  */
-function getWatchPaths(homeDir: string): string[] {
+function getWatchPaths(homeDir: string): WatchPathConfig {
   // 1. 尝试从环境变量获取
   const envPaths = process.env.WATCH_PATHS || process.env.WATCH_PATH;
   if (envPaths) {
-    return envPaths.split(':');
+    const paths = splitPaths(envPaths);
+    if (paths.length > 0) return { paths, source: 'env' };
   }
 
-  // 2. 尝试从 config.json 获取 (项目根目录)
-  const rootDir = process.cwd();
-  const configPath = path.join(rootDir, 'config.json');
-  if (fs.existsSync(configPath)) {
-    try {
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      if (Array.isArray(config.watchPaths)) {
-        return config.watchPaths;
-      }
-      if (typeof config.WATCH_PATHS === 'string') {
-        return config.WATCH_PATHS.split(':');
-      }
-    } catch (err) {
+  // Backwards-compatible alias for the previously documented but unsupported
+  // `WATCH` variable.
+  if (process.env.WATCH) {
+    const paths = splitPaths(process.env.WATCH);
+    if (paths.length > 0) {
       console.warn(
-        `[Config] Failed to parse ${configPath}:`,
-        (err as Error).message,
+        '[Config] WATCH is deprecated and will be removed; use WATCH_PATHS instead.',
       );
+      return { paths, source: 'env' };
     }
   }
 
-  // 3. 尝试从 .env 获取
-  const envFilePath = path.join(rootDir, '.env');
-  if (fs.existsSync(envFilePath)) {
-    try {
-      const content = fs.readFileSync(envFilePath, 'utf-8');
-      const lines = content.split('\n');
-      for (const line of lines) {
-        const match = line.match(/^\s*WATCH_PATHS\s*=\s*(.*)$/);
-        if (match) {
-          let val = match[1].trim();
-          if (
-            (val.startsWith('"') && val.endsWith('"')) ||
-            (val.startsWith("'") && val.endsWith("'"))
-          ) {
-            val = val.slice(1, -1);
-          }
-          return val.split(':');
-        }
-      }
-    } catch (err) {
-      console.warn(
-        `[Config] Failed to read ${envFilePath}:`,
-        (err as Error).message,
-      );
-    }
+  const searchDirs = getConfigSearchDirs();
+
+  // 2. 尝试从 config.json 获取 (仓库根 / server / cwd)
+  for (const dir of searchDirs) {
+    const configPath = path.join(dir, 'config.json');
+    if (!fs.existsSync(configPath)) continue;
+
+    const paths = parseConfigFile(configPath);
+    if (paths) return { paths, source: 'config.json', sourcePath: configPath };
+  }
+
+  // 3. 尝试从 .env 获取 (仓库根 / server / cwd)
+  for (const dir of searchDirs) {
+    const envFilePath = path.join(dir, '.env');
+    if (!fs.existsSync(envFilePath)) continue;
+
+    const paths = parseDotEnvFile(envFilePath);
+    if (paths) return { paths, source: '.env', sourcePath: envFilePath };
   }
 
   // 4. 返回默认路径
-  return [path.join(homeDir, '.gemini/tmp')];
+  return {
+    paths: [path.join(homeDir, '.gemini/tmp')],
+    source: 'default',
+  };
 }
 
 async function bootstrap() {
   const homeDir = os.homedir();
 
   // 1. 解析监听路径
-  const rawPaths = getWatchPaths(homeDir);
+  const config = getWatchPaths(homeDir);
 
-  const watchPaths = rawPaths.map((p) => {
+  const watchPaths = config.paths.map((p) => {
     let resolved = p.trim();
     if (resolved.startsWith('~')) {
       resolved = path.join(homeDir, resolved.slice(1));
@@ -86,6 +154,9 @@ async function bootstrap() {
   });
 
   console.log('--- Gemini Chat Analyze & Evolver ---');
+  console.log(
+    `[System] Config source: ${config.source}${config.sourcePath ? ` (${config.sourcePath})` : ''}`,
+  );
   console.log(`[System] Initializing with ${watchPaths.length} paths:`);
   watchPaths.forEach((p) => console.log(`  - ${p}`));
 
