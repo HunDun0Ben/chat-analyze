@@ -12,6 +12,9 @@ export interface AnalyzedSession {
   projectName: string;
   sessionTitle?: string; // 新增：用于在侧边栏显示的标题
   isCheckpoint?: boolean; // 新增：标识是否为 Checkpoint 文件
+  /** Set by parsers when the name is not derived from the payload; the
+   * manager replaces it with the path-based name. */
+  projectNameIsPlaceholder?: boolean;
   projectHash: string;
   modelId: string; // Last used model
   category: TaskCategory;

@@ -198,6 +198,7 @@ export class GeminiJsonlParser extends BaseParser {
     const session: AnalyzedSession = {
       sessionId: resolveSessionId({ sessionId: metadataSessionId }, filePath),
       projectName: 'Imported', // Default, resolved later by ProjectResolver
+      projectNameIsPlaceholder: true,
       sessionTitle,
       projectHash,
       modelId,

@@ -22,9 +22,7 @@ async function main() {
     console.log('Sample checkpoints:');
     checkpoints
       .slice(0, 5)
-      .forEach((c) =>
-        console.log(`  - [${c.projectName}] ${path.basename(c.filePath)}`),
-      );
+      .forEach((c) => console.log(`  - ${path.basename(c.filePath)}`));
   } else {
     console.log('No checkpoints found! Check the DiscoveryService logic.');
   }

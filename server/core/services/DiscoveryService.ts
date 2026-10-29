@@ -5,11 +5,9 @@ import {
   isIgnoredFileName,
   isSessionFileName,
 } from './discovery/ignored.js';
-import { genericProjectName } from './discovery/projectNaming.js';
 
 export interface DiscoveryResult {
   filePath: string;
-  projectName: string;
   watchRoot: string;
 }
 
@@ -34,11 +32,7 @@ export class DiscoveryService {
           if (seen.has(filePath)) continue;
           seen.add(filePath);
 
-          results.push({
-            filePath,
-            watchRoot: watchPath,
-            projectName: genericProjectName(filePath, watchPath),
-          });
+          results.push({ filePath, watchRoot: watchPath });
         }
       } catch (err) {
         console.error(`[DiscoveryService] Failed to scan ${watchPath}:`, err);

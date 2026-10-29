@@ -1,16 +1,13 @@
 import { CoachService } from '../services/CoachService.js';
-import { GeminiParser } from '../parsers/GeminiParser.js';
-import { ChatGPTParser } from '../parsers/ChatGPTParser.js';
-import { GeminiCheckpointParser } from '../parsers/GeminiCheckpointParser.js';
 import { GeminiJsonlParser } from '../parsers/GeminiJsonlParser.js';
 import { BaseParser } from '../parsers/BaseParser.js';
+import { PARSER_REGISTRATIONS } from './registry.js';
 import { ParseResult, ParseWarning } from './result.js';
 import {
   createFileSource,
   createMemorySource,
   SessionSource,
 } from './source.js';
-import { isRecord } from './shared/guards.js';
 
 /**
  * Single entry point for turning a file on disk into sessions.
@@ -20,16 +17,17 @@ import { isRecord } from './shared/guards.js';
  */
 export class SessionAnalyzer {
   private readonly coachService: CoachService;
-  private readonly geminiParser: GeminiParser;
-  private readonly chatGPTParser: ChatGPTParser;
-  private readonly geminiCheckpointParser: GeminiCheckpointParser;
+  private readonly parsers = new Map<string, BaseParser>();
   private readonly geminiJsonlParser: GeminiJsonlParser;
 
   constructor() {
     this.coachService = new CoachService();
-    this.geminiParser = new GeminiParser(this.coachService);
-    this.chatGPTParser = new ChatGPTParser(this.coachService);
-    this.geminiCheckpointParser = new GeminiCheckpointParser(this.coachService);
+    for (const registration of PARSER_REGISTRATIONS) {
+      this.parsers.set(
+        registration.format,
+        registration.create(this.coachService),
+      );
+    }
     this.geminiJsonlParser = new GeminiJsonlParser(this.coachService);
   }
 
@@ -49,7 +47,7 @@ export class SessionAnalyzer {
       }
 
       const parser = this.getParser(data);
-      if (!parser) throw new Error('Could not determine session format');
+      if (!parser) throw new Error('Unsupported session format');
       return await parser.parse(source);
     } catch (error) {
       return {
@@ -105,25 +103,13 @@ export class SessionAnalyzer {
     return { sessions, warnings };
   }
 
-  /**
-   * Detects session format based on JSON structure.
-   * Format detection will move to a provider registry in a follow-up.
-   */
-  private getParser(session: unknown): BaseParser | null {
-    if (!isRecord(session)) return null;
-    const s = session;
-    // Detect ChatGPT export format
-    if (s.mapping && (s.conversation_id || s.id)) {
-      return this.chatGPTParser;
+  /** Finds the first registered parser that accepts the payload. */
+  private getParser(payload: unknown): BaseParser | null {
+    for (const registration of PARSER_REGISTRATIONS) {
+      if (!registration.canParse(payload)) continue;
+      return this.parsers.get(registration.format) ?? null;
     }
-
-    // Detect Gemini API History (Checkpoint) format
-    if (s.history && Array.isArray(s.history)) {
-      return this.geminiCheckpointParser;
-    }
-
-    // Default to Gemini parser
-    return this.geminiParser;
+    return null;
   }
 
   getCoachService(): CoachService {

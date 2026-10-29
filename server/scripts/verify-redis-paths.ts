@@ -13,7 +13,7 @@ async function main() {
 
   console.log(`Found ${redisFiles.length} files in redis/`);
   redisFiles.forEach((r) => {
-    console.log(`  - [${r.projectName}] ${path.basename(r.filePath)}`);
+    console.log(`  - ${path.basename(r.filePath)}`);
   });
 }
 

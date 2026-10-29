@@ -176,6 +176,7 @@ export class ChatGPTParser extends BaseParser {
     const result: AnalyzedSession = {
       sessionId: resolveSessionId(s, source.filePath, source.index),
       projectName: 'ChatGPT Import',
+      projectNameIsPlaceholder: true,
       sessionTitle: fileName || s.title || 'ChatGPT Chat',
       projectHash: 'chatgpt-import',
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'chatgpt',

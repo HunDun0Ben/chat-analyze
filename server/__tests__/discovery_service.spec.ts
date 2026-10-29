@@ -49,20 +49,11 @@ describe('DiscoveryService', () => {
     ]);
   });
 
-  it('assigns generic project names and records the watch root', async () => {
+  it('records the watch root without computing project names', async () => {
     const results = await service.scan([root]);
-    const byPath = new Map(
-      results.map((result) => [
-        path.relative(root, result.filePath),
-        result.projectName,
-      ]),
-    );
 
-    expect(byPath.get('root.json')).toBe('Imported');
-    expect(byPath.get('project-a/chats/session.json')).toBe('project-a');
-    expect(byPath.get('project-b/session.jsonl')).toBe('project-b');
-    expect(byPath.get('nested/技术组件/Vite/session.json')).toBe('nested');
     expect(results.every((result) => result.watchRoot === root)).toBe(true);
+    expect(results.every((result) => !('projectName' in result))).toBe(true);
   });
 
   it('does not return duplicate files for overlapping watch paths', async () => {
