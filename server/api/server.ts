@@ -5,14 +5,36 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SessionManager } from '../core/manager.js';
 import { UserQuestionsSession } from '../types/index.js';
+import {
+  buildSessionXmlElement,
+  formatSessionTitle,
+} from './prompts/format.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
+const DEFAULT_CORS_ORIGINS = ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+/**
+ * The dashboard is a local tool that reads private conversations, so CORS is
+ * restricted to the known UI origins instead of allowing every site.
+ */
+function getCorsOrigins(): string[] {
+  const configured = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configured.length > 0 ? configured : DEFAULT_CORS_ORIGINS;
+}
+
 export function startServer(manager: SessionManager) {
   const app = express();
-  const port = process.env.PORT || 3001;
+  const port = Number(process.env.PORT ?? 3001);
+  // Bind to loopback by default: this service exposes private chat data and
+  // must not be reachable from the local network unless explicitly asked.
+  const host = process.env.HOST ?? '127.0.0.1';
 
-  app.use(cors());
+  app.use(cors({ origin: getCorsOrigins() }));
   app.use(express.json());
 
   // --- User Questions API ---
@@ -308,15 +330,7 @@ Do not explore the codebase. Work only with the session index, session files, an
       `;
 
           const sessionsXml = paginatedData
-            .map((s) => {
-              const title =
-                s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
-              return `  <session id="${s.sessionId}" project="${s.projectName}" title="${title}" path="${s.filePath || ''}">
-      <questions>
-      ${s.questions.map((q: string) => `      <q>${q.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</q>`).join('\n')}
-      </questions>
-      </session>`;
-            })
+            .map((s) => buildSessionXmlElement(s))
             .join('\n');
 
           const promptFooter = `
@@ -328,11 +342,10 @@ Do not explore the codebase. Work only with the session index, session files, an
         }
 
         const markdown = paginatedData
-          .map((s) => {
-            const title =
-              s.sessionTitle || s.questions[0]?.slice(0, 50) + '...';
-            return `### Session: ${title} (Project: ${s.projectName})\n${s.questions.map((q: string) => `- ${q}`).join('\n')}`;
-          })
+          .map(
+            (s) =>
+              `### Session: ${formatSessionTitle(s)} (Project: ${s.projectName})\n${s.questions.map((q: string) => `- ${q}`).join('\n')}`,
+          )
           .join('\n\n');
 
         res.setHeader('Content-Type', 'text/plain; charset=utf-8');
@@ -552,7 +565,7 @@ Do not explore the codebase. Work only with the session index, session files, an
     }
   });
 
-  app.listen(port, () => {
-    console.log(`[Server] API running at http://localhost:${port}`);
+  app.listen(port, host, () => {
+    console.log(`[Server] API running at http://${host}:${port}`);
   });
 }
