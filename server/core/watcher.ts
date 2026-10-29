@@ -40,6 +40,11 @@ export class ChatWatcher {
       }
     });
 
+    this.watcher.on('unlink', (filePath: string) => {
+      console.log(`[Session Deleted]: ${path.basename(filePath)}`);
+      this.manager.removeByPath(filePath);
+    });
+
     this.watcher.on('change', async (filePath: string) => {
       console.log(`[Session Updated]: ${path.basename(filePath)}`);
       try {

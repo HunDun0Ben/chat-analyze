@@ -26,6 +26,8 @@ export interface AnalyzedSession {
   // Coach Module
   expressionQuality: {
     score: number; // 0-100
+    /** false for sessions without a user turn; excluded from all averages. */
+    scoreable?: boolean;
     ambiguities: string[];
     suggestion: string;
   };

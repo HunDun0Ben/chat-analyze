@@ -8,6 +8,8 @@ export function logResolvedConfig(config: ServerConfig): void {
   );
   console.log(`[System] Watch paths (${config.watchPaths.length}):`);
   config.watchPaths.forEach((watchPath) => console.log(`  - ${watchPath}`));
-  console.log(`[System] Database: ${config.dbPath}`);
+  console.log(
+    `[System] Persistence: ${config.persistence === 'sqlite' ? `sqlite (${config.dbPath})` : 'off (SQLite design kept, writes disabled)'}`,
+  );
   console.log(`[System] Exports: ${config.exportsDir}`);
 }

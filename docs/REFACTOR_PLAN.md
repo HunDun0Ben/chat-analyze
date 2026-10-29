@@ -370,16 +370,17 @@ Agent-B: PR-2 (core/parsers、core/services/discovery、core/manager)
 ### PR-7 `refactor(server): 统一存储与统计`
 
 **覆盖**:#16 存储方案、#8 幽灵会话、#17 StatsService、#20 并发与 mtime、#5 空会话规则
-**开工前必须先做决策**(见 6.1),不要把 A/B 方案混着写。
+**已定案**:采用方案 C(见 6.1)——保留 SQLite 设计,默认关闭写入。
 
 **改动**
 
 - `core/services/CoachService.ts`:无用户消息时返回 `null` 或标记 `scoreable: false`
 - 新增 `core/stats/StatsService.ts`:`summary` / `timeline` / `byModel` / `byProject` / `userQuestions`,内部统一过滤 `userTurns > 0`
-- `db/storage.ts` → `storage/SessionRepository.ts`
-  - 若选方案 A:新增 `filePath` / `mtimeMs` / `size` 列,`upsertMany` 用事务,`deleteByFilePath`,启动先读缓存
-  - 若选方案 B:删除持久层与其全部 SQL
-- `core/manager.ts`:并发上限 6–8;`(path, mtimeMs, size)` 指纹跳过未变化文件
+- `db/`:`SessionStore` 端口 + `SessionStorage` 实现;新增 `filePath` 列与 `deleteByFilePath`,
+  修复 `getStatsTimeline` 取到最旧 30 天的问题;默认不实例化(不建库、不写库)
+- `core/manager.ts`:并发上限 8;进程内 `(mtimeMs,size)` 指纹跳过未变化文件;
+  `removeByPath()` 同时清理内存、指纹与(启用时)数据库
+- `core/watcher.ts`:新增 `unlink` → `manager.removeByPath()`
 - `core/watcher.ts`:注册 `unlink` / `unlinkDir` → `manager.removeByPath`
 - `manager` 维护 `filePath → sessionId[]` 反向索引
 - API 路由中的聚合循环改为调用 `StatsService`
@@ -472,14 +473,19 @@ Agent-B: PR-2 (core/parsers、core/services/discovery、core/manager)
 
 开工前必须有人拍板;没有结论时按"推荐默认"执行,并在 PR 描述里注明。
 
-### 6.1 #16 存储方案:A 还是 B
+### 6.1 #16 存储方案:已定案 C(保留设计,默认停写)
 
-| 选项  | 内容                                     | 推荐                     |
-| ----- | ---------------------------------------- | ------------------------ |
-| **A** | 真做缓存:指纹表 + 启动先读 DB + 增量校验 | ✅ **默认选 A**          |
-| B     | 删除持久层,只保留内存                    | 仅当确认无人需要历史检索 |
+| 选项  | 内容                                      | 状态            |
+| ----- | ----------------------------------------- | --------------- |
+| A     | 真做缓存:指纹表 + 启动先读 DB + 增量校验  | 暂缓            |
+| B     | 删除持久层,只保留内存                     | 不采用          |
+| **C** | **保留 SQLite 与会话表设计,默认关闭写入** | ✅ **当前方案** |
 
-选 A 的理由:能同时解决 #20 的启动性能,且保留"历史数据可检索"的产品能力。选 A 时注意 `data` 列与冗余列不要双份存储。
+**决策(2026-10-30)**:先保留数据库设计与 `SessionStorage` 实现,但默认 `PERSISTENCE=off`,
+进程不打开数据库文件,也不产生任何写入;需要时用 `PERSISTENCE=sqlite` 打开。
+跨重启的增量缓存(方案 A)留待以后重新评估,当前只做进程内指纹跳过与并发上限。
+
+理由:避免继续写入 63MB/802 行的陈旧数据与幽灵行,同时不放弃将来做启动缓存的可能。
 
 ### 6.2 #24 `limit=0` 的语义
 

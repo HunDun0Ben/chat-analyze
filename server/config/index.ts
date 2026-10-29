@@ -16,6 +16,8 @@ export interface ServerConfig {
   host: string;
   dbPath: string;
   exportsDir: string;
+  /** "off" keeps the SQLite design but disables every write. */
+  persistence: 'off' | 'sqlite';
 }
 
 export interface LoadConfigOptions {
@@ -124,6 +126,15 @@ function findFirstExisting(
   return undefined;
 }
 
+function parsePersistence(value: string | undefined): 'off' | 'sqlite' {
+  const mode = value?.trim().toLowerCase();
+  if (!mode || mode === 'off') return 'off';
+  if (mode === 'sqlite') return 'sqlite';
+  throw new Error(
+    `[Config] Invalid PERSISTENCE: "${value}" (expected "off" or "sqlite")`,
+  );
+}
+
 function parsePort(value: string | undefined, fallback: number): number {
   if (value === undefined || value.trim() === '') return fallback;
 
@@ -215,6 +226,7 @@ export function loadConfig(options: LoadConfigOptions = {}): ServerConfig {
     watchPathsSource,
     watchPathsSourcePath,
     port: parsePort(mergedEnv.PORT, DEFAULT_PORT),
+    persistence: parsePersistence(mergedEnv.PERSISTENCE),
     host: mergedEnv.HOST?.trim() || DEFAULT_HOST,
     dbPath: path.resolve(
       cwd,

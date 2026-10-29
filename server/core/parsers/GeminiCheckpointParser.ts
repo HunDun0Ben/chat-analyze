@@ -128,6 +128,7 @@ export class GeminiCheckpointParser extends BaseParser {
           startTime: timestamp,
           lastUpdated: timestamp,
           expressionQuality: {
+            scoreable: userMsgs.length > 0,
             score: this.coachService.calculateQualityScore(
               correctionCount,
               firstPrompt,

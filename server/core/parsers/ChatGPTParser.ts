@@ -191,6 +191,7 @@ export class ChatGPTParser extends BaseParser {
           ? new Date(s.update_time * 1000).toISOString()
           : fallbackTimestamp,
       expressionQuality: {
+        scoreable: userMsgs.length > 0,
         score: this.coachService.calculateQualityScore(
           correctionCount,
           firstPrompt,

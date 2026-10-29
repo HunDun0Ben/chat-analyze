@@ -174,3 +174,53 @@ describe('loadConfig scalar settings', () => {
     ).toThrow(/Invalid PORT/);
   });
 });
+
+describe('loadConfig persistence', () => {
+  it('disables persistence by default', async () => {
+    const root = await makeRepo();
+
+    const config = loadConfig({ repoRoot: root, cwd: root, env: {} });
+
+    expect(config.persistence).toBe('off');
+  });
+
+  it('enables sqlite through the environment', async () => {
+    const root = await makeRepo();
+
+    const config = loadConfig({
+      repoRoot: root,
+      cwd: root,
+      env: { PERSISTENCE: 'sqlite' },
+    });
+
+    expect(config.persistence).toBe('sqlite');
+  });
+
+  it('enables sqlite through .env', async () => {
+    const root = await makeRepo({ '.env': 'PERSISTENCE=sqlite\n' });
+
+    const config = loadConfig({ repoRoot: root, cwd: root, env: {} });
+
+    expect(config.persistence).toBe('sqlite');
+  });
+
+  it('treats an explicit "off" as disabled', async () => {
+    const root = await makeRepo();
+
+    const config = loadConfig({
+      repoRoot: root,
+      cwd: root,
+      env: { PERSISTENCE: 'off' },
+    });
+
+    expect(config.persistence).toBe('off');
+  });
+
+  it('rejects an unknown persistence mode', async () => {
+    const root = await makeRepo();
+
+    expect(() =>
+      loadConfig({ repoRoot: root, cwd: root, env: { PERSISTENCE: 'redis' } }),
+    ).toThrow(/Invalid PERSISTENCE/);
+  });
+});

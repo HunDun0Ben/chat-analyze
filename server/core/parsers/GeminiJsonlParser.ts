@@ -207,6 +207,7 @@ export class GeminiJsonlParser extends BaseParser {
       startTime,
       lastUpdated,
       expressionQuality: {
+        scoreable: userTurns > 0,
         score: this.coachService.calculateQualityScore(
           correctionCount,
           firstPrompt,

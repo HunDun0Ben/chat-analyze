@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import request from 'supertest';
 import { createApp, SessionManagerLike } from '../app.js';
+import { StatsService } from '../core/stats/StatsService.js';
 import { AnalyzedSession } from '../types/index.js';
 
 const EXPORTS_DIR = '/tmp/chat-analyze-test-exports';
@@ -59,11 +60,7 @@ function makeManager(sessions: AnalyzedSession[]): SessionManagerLike {
     ],
     getSessionsByProject: (projectName) =>
       sessions.filter((s) => s.projectName === projectName),
-    getStats: () => ({
-      total: sessions.length,
-      avgScore: 80,
-      totalTokens: 2,
-    }),
+    getStats: () => new StatsService().summary(sessions),
   };
 }
 
@@ -207,6 +204,40 @@ describe('prompt rendering', () => {
 
     expect(response.text).not.toContain('undefined...');
     expect(response.text).toContain('how do I reset the cache?...');
+  });
+});
+
+describe('GET /api/stats', () => {
+  it('excludes sessions without user turns from the average', async () => {
+    const sessions = [
+      makeSession({
+        sessionId: 'scored',
+        expressionQuality: { score: 60, ambiguities: [], suggestion: '' },
+      }),
+      makeSession({
+        sessionId: 'empty',
+        expressionQuality: { score: 100, ambiguities: [], suggestion: '' },
+        stats: {
+          turns: 0,
+          userTurns: 0,
+          geminiTurns: 0,
+          corrections: 0,
+          toolChain: [],
+          tokenUsage: { input: 0, output: 0, thoughts: 0, total: 0 },
+        },
+        messages: [],
+      }),
+    ];
+
+    const summary = await request(appWith(sessions))
+      .get('/api/stats/summary')
+      .expect(200);
+    expect(summary.body).toEqual({ total: 2, avgScore: 60, totalTokens: 2 });
+
+    const timeline = await request(appWith(sessions))
+      .get('/api/stats/timeline')
+      .expect(200);
+    expect(timeline.body).toEqual([{ date: '2026-01-01', avgScore: 60 }]);
   });
 });
 

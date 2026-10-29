@@ -110,6 +110,7 @@ export class GeminiParser extends BaseParser {
           startTime: s.startTime || fallbackTimestamp,
           lastUpdated: s.lastUpdated || fallbackTimestamp,
           expressionQuality: {
+            scoreable: userMsgs.length > 0,
             score: this.coachService.calculateQualityScore(
               correctionCount,
               firstPrompt,
