@@ -3,26 +3,7 @@ import { BaseParser } from './BaseParser.js';
 import { ParserOutput } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
 import { stableSessionId } from '../parsing/shared/ids.js';
-
-interface GeminiPart {
-  text?: string;
-  thought?: boolean;
-  functionCall?: {
-    id?: string;
-    name: string;
-    args?: Record<string, unknown>;
-  };
-  functionResponse?: {
-    id: string;
-    name: string;
-    response: unknown;
-  };
-}
-
-interface GeminiHistoryItem {
-  role: 'user' | 'model';
-  parts: GeminiPart[];
-}
+import { checkpointSchema, describeZodError } from './schemas.js';
 
 /**
  * GeminiCheckpointParser
@@ -31,17 +12,20 @@ interface GeminiHistoryItem {
 export class GeminiCheckpointParser extends BaseParser {
   async parse(source: SessionSource): Promise<ParserOutput> {
     const { filePath, fileName } = source;
-    const s = (await source.readJson()) as { history: GeminiHistoryItem[] };
+    const parsed = checkpointSchema.safeParse(await source.readJson());
+
+    if (!parsed.success) {
+      throw new Error(
+        `Not a valid Gemini checkpoint: ${describeZodError(parsed.error)}`,
+      );
+    }
+
     // Checkpoints do not store message timestamps. Using the file mtime keeps
     // the parse deterministic instead of shifting on every restart.
     const timestamp = new Date(source.stat.mtimeMs).toISOString();
 
-    if (!s || !Array.isArray(s.history)) {
-      throw new Error('Not a valid Gemini checkpoint: Missing "history" array');
-    }
-
-    const messages: SessionMessage[] = s.history.map(
-      (h: GeminiHistoryItem, index: number) => {
+    const messages: SessionMessage[] = parsed.data.history.map(
+      (h, index: number) => {
         const type = h.role === 'model' ? 'gemini' : 'user';
 
         const msg: SessionMessage = {
@@ -51,11 +35,11 @@ export class GeminiCheckpointParser extends BaseParser {
           content: '',
         };
 
-        if (Array.isArray(h.parts)) {
+        if (h.parts.length > 0) {
           const texts: string[] = [];
           const toolCalls: ToolCall[] = [];
 
-          for (const part of h.parts as GeminiPart[]) {
+          for (const part of h.parts) {
             if (part.text) {
               if (part.thought === true) {
                 if (!msg.thoughts) msg.thoughts = [];

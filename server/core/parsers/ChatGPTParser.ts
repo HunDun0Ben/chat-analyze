@@ -7,28 +7,36 @@ import { BaseParser } from './BaseParser.js';
 import { ParserOutput } from '../parsing/result.js';
 import { SessionSource } from '../parsing/source.js';
 import { extractContent } from '../parsing/shared/content.js';
+import { isRecord } from '../parsing/shared/guards.js';
 import { resolveSessionId } from '../parsing/shared/ids.js';
+import {
+  chatGPTExportSchema,
+  describeZodError,
+  type ChatGPTMessage,
+} from './schemas.js';
 
 export class ChatGPTParser extends BaseParser {
   async parse(source: SessionSource): Promise<ParserOutput> {
     const { filePath, fileName } = source;
-    const s = (await source.readJson()) as Record<string, unknown>;
+    const parsed = chatGPTExportSchema.safeParse(await source.readJson());
+
+    if (!parsed.success) {
+      throw new Error(
+        `Not a valid ChatGPT export: ${describeZodError(parsed.error)}`,
+      );
+    }
+
+    const s = parsed.data;
     const fallbackTimestamp = new Date(source.stat.mtimeMs).toISOString();
-    const currentNodeId = s.current_node as string;
-    const nodeChain: Record<string, unknown>[] = [];
+    const mapping = s.mapping;
+    const nodeChain: ChatGPTMessage[] = [];
 
     // Reconstruct conversation thread from leaf to root
-    let pointer: string | undefined = currentNodeId;
-    const mapping = (s.mapping || {}) as Record<
-      string,
-      Record<string, unknown>
-    >;
+    let pointer: string | undefined = s.current_node;
     while (pointer && mapping[pointer]) {
       const node = mapping[pointer];
-      if (node.message) {
-        nodeChain.push(node.message as Record<string, unknown>);
-      }
-      pointer = node.parent as string | undefined;
+      if (node.message) nodeChain.push(node.message);
+      pointer = node.parent ?? undefined;
     }
     nodeChain.reverse();
 
@@ -42,13 +50,17 @@ export class ChatGPTParser extends BaseParser {
     let pendingAssistantMsg: SessionMessage | null = null;
 
     for (const m of nodeChain) {
-      const author = (m.author || {}) as Record<string, string>;
-      const role = author.role;
+      const role = m.author?.role;
       const content = extractContent(m.content);
-      const mMetadata = (m.metadata || {}) as Record<string, unknown>;
-      const timestamp = m.create_time
-        ? new Date((m.create_time as number) * 1000).toISOString()
-        : fallbackTimestamp;
+      const metadata = m.metadata ?? {};
+      const modelSlug =
+        typeof metadata.model_slug === 'string'
+          ? metadata.model_slug
+          : undefined;
+      const timestamp =
+        m.create_time !== null && m.create_time !== undefined
+          ? new Date(m.create_time * 1000).toISOString()
+          : fallbackTimestamp;
 
       if (role === 'user') {
         if (pendingAssistantMsg) {
@@ -57,11 +69,11 @@ export class ChatGPTParser extends BaseParser {
         }
 
         resultMessages.push({
-          id: m.id as string,
+          id: m.id ?? '',
           timestamp,
           type: 'user',
           content,
-          model: (mMetadata.model_slug as string) || 'chatgpt',
+          model: modelSlug || 'chatgpt',
         });
 
         currentThoughts = [];
@@ -69,11 +81,11 @@ export class ChatGPTParser extends BaseParser {
       } else if (role === 'assistant') {
         if (!pendingAssistantMsg) {
           pendingAssistantMsg = {
-            id: m.id as string,
+            id: m.id ?? '',
             timestamp,
             type: 'gemini', // Using 'gemini' type for assistant consistency in UI
             content: '',
-            model: (mMetadata.model_slug as string) || 'chatgpt',
+            model: modelSlug || 'chatgpt',
             thoughts: currentThoughts,
             toolCalls: currentToolCalls,
           };
@@ -91,7 +103,7 @@ export class ChatGPTParser extends BaseParser {
           continue;
         }
 
-        const mContent = (m.content || {}) as Record<string, unknown>;
+        const mContent = isRecord(m.content) ? m.content : {};
         if (
           mContent.content_type === 'code' ||
           m.recipient === 'browser' ||
@@ -104,7 +116,7 @@ export class ChatGPTParser extends BaseParser {
                 ? 'code_interpreter'
                 : 'tool';
           currentToolCalls.push({
-            id: m.id as string,
+            id: m.id ?? '',
             name: toolName,
             args: { code: content },
             status: 'success',
@@ -135,7 +147,7 @@ export class ChatGPTParser extends BaseParser {
         }
       } else if (role === 'system' && content.trim()) {
         resultMessages.push({
-          id: m.id as string,
+          id: m.id ?? '',
           timestamp,
           type: 'info',
           content,
@@ -164,17 +176,19 @@ export class ChatGPTParser extends BaseParser {
     const result: AnalyzedSession = {
       sessionId: resolveSessionId(s, source.filePath, source.index),
       projectName: 'ChatGPT Import',
-      sessionTitle: fileName || (s.title as string) || 'ChatGPT Chat',
+      sessionTitle: fileName || s.title || 'ChatGPT Chat',
       projectHash: 'chatgpt-import',
       modelId: geminiMsgs[geminiMsgs.length - 1]?.model || 'chatgpt',
       category: this.coachService.detectCategory(firstPrompt, toolChain),
       provider: 'chatgpt',
-      startTime: s.create_time
-        ? new Date((s.create_time as number) * 1000).toISOString()
-        : fallbackTimestamp,
-      lastUpdated: s.update_time
-        ? new Date((s.update_time as number) * 1000).toISOString()
-        : fallbackTimestamp,
+      startTime:
+        s.create_time !== null && s.create_time !== undefined
+          ? new Date(s.create_time * 1000).toISOString()
+          : fallbackTimestamp,
+      lastUpdated:
+        s.update_time !== null && s.update_time !== undefined
+          ? new Date(s.update_time * 1000).toISOString()
+          : fallbackTimestamp,
       expressionQuality: {
         score: this.coachService.calculateQualityScore(
           correctionCount,
